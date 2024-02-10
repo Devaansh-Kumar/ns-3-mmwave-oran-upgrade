@@ -306,27 +306,21 @@ RadioBearerStatsCalculator::WriteUlResults(std::ofstream& outFile)
         }
     }
 
-    for (auto it = m_ulRxPackets.begin(); it != m_ulRxPackets.end(); ++it)
-    {
-        if (find(pairVector.begin(), pairVector.end(), (*it).first) == pairVector.end())
-        {
-            pairVector.push_back((*it).first);
-        }
-    }
-
     Time endTime = m_startTime + m_epochDuration;
     for (auto it = pairVector.begin(); it != pairVector.end(); ++it)
     {
         ImsiLcidPair_t p = *it;
         auto flowIdIt = m_flowId.find(p);
-        NS_ASSERT_MSG(flowIdIt != m_flowId.end(),
-                      "FlowId (imsi " << p.m_imsi << " lcid " << (uint32_t)p.m_lcId
-                                      << ") is missing");
+        // \TODO Temporary workaround until traces are connected correctly in LteEnbRrc and LteUeRrc
+      if (flowIdIt == m_flowId.end ()) continue;
+//       NS_ASSERT_MSG (flowIdIt != m_flowId.end (),
+//                      "FlowId (imsi " << p.m_imsi << " lcid " << (uint32_t) p.m_lcId << ") is missing");
+      
         LteFlowId_t flowId = flowIdIt->second;
         NS_ASSERT_MSG(flowId.m_lcId == p.m_lcId, "lcid mismatch");
 
-        outFile << m_startTime.GetSeconds() << "\t";
-        outFile << endTime.GetSeconds() << "\t";
+        outFile << m_startTime.GetNanoSeconds () / 1.0e9 << "\t";
+        outFile << endTime.GetNanoSeconds () / 1.0e9 << "\t";
         outFile << GetUlCellId(p.m_imsi, p.m_lcId) << "\t";
         outFile << p.m_imsi << "\t";
         outFile << flowId.m_rnti << "\t";
@@ -366,27 +360,20 @@ RadioBearerStatsCalculator::WriteDlResults(std::ofstream& outFile)
         }
     }
 
-    for (auto it = m_dlRxPackets.begin(); it != m_dlRxPackets.end(); ++it)
-    {
-        if (find(pairVector.begin(), pairVector.end(), (*it).first) == pairVector.end())
-        {
-            pairVector.push_back((*it).first);
-        }
-    }
-
     Time endTime = m_startTime + m_epochDuration;
     for (auto pair = pairVector.begin(); pair != pairVector.end(); ++pair)
     {
         ImsiLcidPair_t p = *pair;
         auto flowIdIt = m_flowId.find(p);
-        NS_ASSERT_MSG(flowIdIt != m_flowId.end(),
-                      "FlowId (imsi " << p.m_imsi << " lcid " << (uint32_t)p.m_lcId
-                                      << ") is missing");
+        // \TODO Temporary workaround until traces are connected correctly in LteEnbRrc and LteUeRrc
+      if (flowIdIt == m_flowId.end ()) continue;
+//       NS_ASSERT_MSG (flowIdIt != m_flowId.end (),
+//                      "FlowId (imsi " << p.m_imsi << " lcid " << (uint32_t) p.m_lcId << ") is missing");
         LteFlowId_t flowId = flowIdIt->second;
         NS_ASSERT_MSG(flowId.m_lcId == p.m_lcId, "lcid mismatch");
 
-        outFile << m_startTime.GetSeconds() << "\t";
-        outFile << endTime.GetSeconds() << "\t";
+        outFile << m_startTime.GetNanoSeconds () / 1.0e9 << "\t";
+        outFile << endTime.GetNanoSeconds () / 1.0e9 << "\t";
         outFile << GetDlCellId(p.m_imsi, p.m_lcId) << "\t";
         outFile << p.m_imsi << "\t";
         outFile << flowId.m_rnti << "\t";

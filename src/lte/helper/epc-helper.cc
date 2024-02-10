@@ -18,6 +18,9 @@
  *   Jaume Nin <jnin@cttc.es>
  *   Nicola Baldo <nbaldo@cttc.es>
  *   Manuel Requena <manuel.requena@cttc.es>
+ * 
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Support for real S1AP link
  */
 
 #include "epc-helper.h"

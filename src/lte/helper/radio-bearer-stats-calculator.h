@@ -77,14 +77,12 @@ class RadioBearerStatsCalculator : public LteStatsCalculator
 
     /**
      * Class constructor
-     * \param protocolType the name of the protocol type
      */
     RadioBearerStatsCalculator(std::string protocolType);
 
     /**
      * Class destructor
      */
-
     ~RadioBearerStatsCalculator() override;
 
     // Inherited from ns3::Object
