@@ -18,6 +18,9 @@
  *   Jaume Nin <jnin@cttc.es>
  *   Nicola Baldo <nbaldo@cttc.es>
  *   Manuel Requena <manuel.requena@cttc.es>
+ * 
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Support for real S1AP link
  */
 
 #ifndef EPC_HELPER_H
@@ -36,7 +39,10 @@ namespace ns3
 class Node;
 class NetDevice;
 class VirtualNetDevice;
+class EpcSgwPgwApplication;
 class EpcX2;
+class EpcMme;
+class EpcUeNas;
 
 /**
  * \ingroup lte
@@ -50,6 +56,7 @@ class EpcX2;
 class EpcHelper : public Object
 {
   public:
+
     /**
      * Constructor
      */
@@ -78,7 +85,7 @@ class EpcHelper : public Object
      */
     virtual void AddEnb(Ptr<Node> enbNode,
                         Ptr<NetDevice> lteEnbNetDevice,
-                        std::vector<uint16_t> cellIds) = 0;
+                        uint16_t cellId) = 0;
 
     /**
      * Notify the EPC of the existence of a new UE which might attach at a later time
@@ -97,19 +104,6 @@ class EpcHelper : public Object
     virtual void AddX2Interface(Ptr<Node> enbNode1, Ptr<Node> enbNode2) = 0;
 
     /**
-     * Add an S1 interface between an eNB and a SGW
-     *
-     * \param enb eNB peer of the S1 interface
-     * \param enbAddress eNB IPv4 address of the S1 interface
-     * \param sgwAddress SGW IPv4 address of the S1 interface
-     * \param cellIds cellIds of the eNB
-     */
-    virtual void AddS1Interface(Ptr<Node> enb,
-                                Ipv4Address enbAddress,
-                                Ipv4Address sgwAddress,
-                                std::vector<uint16_t> cellIds) = 0;
-
-    /**
      * Activate an EPS bearer, setting up the corresponding S1-U tunnel.
      *
      *
@@ -125,6 +119,20 @@ class EpcHelper : public Object
                                       uint64_t imsi,
                                       Ptr<EpcTft> tft,
                                       EpsBearer bearer) = 0;
+
+    /**
+     * Activate an EPS bearer, setting up the corresponding S1-U tunnel.
+     *
+     *
+     *
+     * \param ueLteDevice the Ipv4-enabled device of the UE, normally
+     * connected via the LTE radio interface
+     * \param the NAS of that device
+     * \param imsi the unique identifier of the UE
+     * \param tft the Traffic Flow Template of the new bearer
+     * \param bearer struct describing the characteristics of the EPS bearer to be activated
+     */
+    virtual uint8_t ActivateEpsBearer (Ptr<NetDevice> ueLteDevice, Ptr<EpcUeNas> ueNas, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer) = 0;
 
     /**
      * Get the SGW node
