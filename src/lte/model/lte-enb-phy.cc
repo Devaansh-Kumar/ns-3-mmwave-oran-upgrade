@@ -19,13 +19,15 @@
  */
 
 #include "lte-enb-phy.h"
-
+#include "lte-ue-phy.h"
 #include "lte-common.h"
 #include "lte-control-messages.h"
 #include "lte-net-device.h"
 #include "lte-spectrum-value-helper.h"
 #include "lte-vendor-specific-parameters.h"
-
+#include "lte-enb-net-device.h"
+#include "lte-ue-rrc.h"
+#include "lte-enb-mac.h"
 #include <ns3/attribute-accessor-helper.h>
 #include <ns3/double.h>
 #include <ns3/log.h>
@@ -39,6 +41,7 @@
 #include <ns3/node-list.h>
 #include <ns3/node.h>
 #include <ns3/pointer.h>
+#include <ns3/lte-ue-net-device.h>
 
 namespace ns3
 {

@@ -23,6 +23,8 @@
  *   Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *   Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
  *   Vignesh Babu <ns3-dev@esk.fraunhofer.de> (RLF extensions)
+    Modified by: Tommaso Zugno <tommasozugno@gmail.com>
+ *              Integration of Carrier Aggregation for the mmWave module
  */
 
 #ifndef LTE_ENB_RRC_H
@@ -34,22 +36,29 @@
 #include "lte-anr-sap.h"
 #include "lte-ccm-rrc-sap.h"
 #include "lte-enb-cmac-sap.h"
+#include <ns3/ff-mac-sched-sap.h>
+#include <ns3/ff-mac-csched-sap.h>
 #include "lte-enb-cphy-sap.h"
 #include "lte-ffr-rrc-sap.h"
 #include "lte-handover-management-sap.h"
 #include "lte-mac-sap.h"
 #include "lte-pdcp-sap.h"
+#include <ns3/lte-pdcp.h>
 #include "lte-rrc-sap.h"
-
+#include <ns3/lte-rlc.h>
 #include <ns3/event-id.h>
 #include <ns3/nstime.h>
 #include <ns3/object.h>
 #include <ns3/traced-callback.h>
-
+#include <ns3/lte-rlc-am.h>
 #include <map>
 #include <set>
 #include <vector>
 
+#define MIN_NO_CC 1
+#define MAX_NO_CC 5 // this is the maximum number of carrier components allowed by 3GPP up to R13
+#define MIN_NO_MMW_CC 1
+#define MAX_NO_MMW_CC 16 // from TR 38.802
 namespace ns3
 {
 
@@ -58,6 +67,7 @@ class LteSignalingRadioBearerInfo;
 class LteDataRadioBearerInfo;
 class LteEnbRrc;
 class Packet;
+class RlcBearerInfo;
 
 /**
  * \ingroup lte
@@ -87,7 +97,9 @@ class UeManager : public Object
         HANDOVER_JOINING,
         HANDOVER_PATH_SWITCH,
         HANDOVER_LEAVING,
-        NUM_STATES
+        NUM_STATES,
+        PREPARE_MC_CONNECTION_RECONFIGURATION,
+        MC_CONNECTION_RECONFIGURATION,
     };
 
     UeManager();
@@ -136,6 +148,17 @@ class UeManager : public Object
      * Process Initial context setup request message from the MME.
      * It triggers RRC connection reconfiguration.
      */
+     bool GetIsMc (void) const;
+    /**
+    * Setup a new data radio bearer, including both the configuration
+    * within the eNB and the necessary RRC signaling with the UE
+    *
+    * \param bearer the QoS characteristics of the bearer
+    * \param bearerId the EPS bearer identifier
+    * \param gtpTeid S1-bearer GTP tunnel endpoint identifier, see 36.423 9.2.1
+    * \param transportLayerAddress  IP Address of the SGW, see 36.423 9.2.1
+    *
+    */
     void InitialContextSetupRequest();
 
     /**
@@ -268,6 +291,13 @@ class UeManager : public Object
      *
      * \param params the SN STATUS
      */
+     void RecvRlcSetupRequest (EpcX2SapUser::RlcSetupRequest params);
+
+      /**
+      * Ack the setup of the RLC remote entity, start the re-configuration on the UE
+      */
+  void RecvRlcSetupCompleted (uint8_t drbid);
+
     void RecvHandoverCancel(EpcX2SapUser::HandoverCancelParams params);
 
     // METHODS FORWARDED FROM ENB RRC SAP ///////////////////////////////////////
@@ -377,12 +407,91 @@ class UeManager : public Object
      *
      * \param pdschConfigDedicated new pdschConfigDedicated (i.e. P_A value) to be set
      */
-    void SetPdschConfigDedicated(LteRrcSap::PdschConfigDedicated pdschConfigDedicated);
+    void SetPdschConfigDedicated (LteRrcSap::PdschConfigDedicated pdschConfigDedicated);
+
+  /**
+   * TracedCallback signature for state transition events.
+   *
+   * \param [in] imsi
+   * \param [in] cellId
+   * \param [in] rnti
+   * \param [in] oldState
+   * \param [in] newState
+   */
+  typedef void (*StateTracedCallback)
+    (const uint64_t imsi, const uint16_t cellId, const uint16_t rnti,
+    const State oldState, const State newState);
 
     /**
-     * Cancel all timers which are running for the UE
+     * TracedCallback signature for imsi, cellId and rnti events.
      *
+     * \param [in] imsi
+     * \param [in] cellId
+     * \param [in] rnti
      */
+    typedef void (* ImsiCidRntiTracedCallback)
+      (uint64_t imsi, uint16_t cellId, uint16_t rnti);
+
+    // for interRatHandover mode
+    void SetFirstConnection();
+
+    // for mc devices, get the m_allMmWaveInOutageAtInitialAccess variable
+    bool GetAllMmWaveInOutageAtInitialAccess();
+    void SetAllMmWaveInOutageAtInitialAccess(bool param);
+
+    /**
+     * This method is called by the eNB RRC to notify the
+     * UeManager that the handover from a MmWave cell to LTE
+     * was completed. Then, according to the state of
+     * the UeManager, it will modify the m_mmWaveCellSetupCompleted map
+     * of RRC.
+     * Used only with InterRat HO mode
+     */
+    void RecvNotifyLteMmWaveHandoverCompleted();
+
+    /**
+     * Notify a mmWave remote UeManager that a switch is expected.
+     * If the switch is to LTE, forward RLC buffers to LTE eNB
+     */
+    void RecvConnectionSwitchToMmWave (bool useMmWaveConnection, uint8_t drbid);
+
+    /**
+     * A SecondaryCellHandoverCompleted is received by the LTE eNB when the
+     * handover between 2 mmWave eNBs is completed. The LTE eNB has to update
+     * the information on the secondary cell and send the connection release to the
+     * source mmWave eNB.
+     */
+    void RecvSecondaryCellHandoverCompleted (EpcX2SapUser::SecondaryHandoverCompletedParams params);
+
+private:
+  //Lossless HO: merge 2 buffers into 1 with increment order.
+  std::vector < LteRlcAm::RetxPdu > MergeBuffers(std::vector < LteRlcAm::RetxPdu > first, std::vector < LteRlcAm::RetxPdu > second);
+  /**
+   * Forward the content of RLC buffers. For RLC UM and UM LowLat, forward txBuffer.
+   * For RLC AM, forward the merge of retx and txed buffers, and txBuffer
+   * @param the RLC entity
+   * @param the PDCP entity, if the mcLteToMmWaveForwarding is false it can be 0
+   * @param the gtpTeid that identifies the X2 connection to be used
+   * @param a bool that specifies if this operation involves a classic forwarding (to PDCP of the target eNB)
+   * or a LTE to MmWave Dual Connectivity forwarding, which needs the packets to be inserted back in the LTE PDCP
+   * (there is no PDCP in the MmWave eNB in DC setup)
+   * @param a bool that specifies if this operation involves the forwarding of packets from a secondary mmWave cell
+   * to another secondary mmWave cell during a secondary cell HO
+   * @param the bearer id, used only if mcLteToMmWaveForwarding is true
+   */
+  void ForwardRlcBuffers(Ptr<LteRlc> rlc, Ptr<LtePdcp> pdcp, uint32_t gtpTeid, bool mcLteToMmWaveForwarding, bool mcMmToMmWaveForwarding, uint8_t bid);
+
+
+  bool m_firstConnection;
+  bool m_receivedLteMmWaveHandoverCompleted;
+  uint16_t m_queuedHandoverRequestCellId;
+  /**
+   * Add a new LteDataRadioBearerInfo structure to the UeManager
+   *
+   * \param radioBearerInfo
+   *
+   * \return the id of the newly added data radio bearer structure
+   */
     void CancelPendingEvents();
 
     /**
@@ -541,6 +650,11 @@ class UeManager : public Object
     /**
      * The `Srb0` attribute. SignalingRadioBearerInfo for SRB0.
      */
+       std::map <uint8_t, Ptr<RlcBearerInfo> > m_rlcMap;
+  /**
+   * Map the drb into a RLCSetupRequest (used to handover remote independent RLC in an MC setup)
+   */
+  std::vector <EpcX2SapUser::RlcSetupRequest> m_rlcRequestVector;
     Ptr<LteSignalingRadioBearerInfo> m_srb0;
     /**
      * The `Srb1` attribute. SignalingRadioBearerInfo for SRB1.
@@ -572,6 +686,10 @@ class UeManager : public Object
     LtePdcpSapUser* m_drbPdcpSapUser; ///< DRB PDCP SAP user
 
     bool m_pendingRrcConnectionReconfiguration; ///< pending RRC connection reconfiguration
+    bool m_pendingConnectToMmWave; ///< this attribute is set to true when RecvRrcConnectionSetupCompleted
+                                   // is executed. At the end of the CA configuration procedure, the
+                                   // LTE eNB will select the best mmWaveCell and will send the
+                                   // ConnectToMmWave command to the UE
 
     /**
      * The `StateTransition` trace source. Fired upon every UE state transition
@@ -585,6 +703,13 @@ class UeManager : public Object
      * the RLC and PDCP entities are created for one logical channel.
      * Exporting IMSI, cell ID, RNTI, LCID.
      */
+     
+    /**
+    * The `SwitchToMmWaveEnb` trace source. Fired upon receiving an ACK to a command to
+    * switch to MmWave RAT. Exporting IMSI, cellId, RNTI.
+    */
+    TracedCallback<uint64_t, uint16_t, uint16_t> m_secondaryRlcCreatedTrace;
+
     TracedCallback<uint64_t, uint16_t, uint16_t, uint8_t> m_drbCreatedTrace;
 
     uint16_t m_sourceX2apId;              ///< source X2 ap ID
@@ -593,7 +718,11 @@ class UeManager : public Object
     uint16_t m_targetCellId;              ///< target cell ID
     std::list<uint8_t> m_drbsToBeStarted; ///< DRBS to be started
     bool m_needPhyMacConfiguration;       ///< need Phy MAC configuration
-
+    uint16_t m_mmWaveCellId;
+    uint16_t m_mmWaveRnti;
+    bool m_mmWaveCellAvailableForMcSetup;
+    bool m_isMc;
+    //bool m_isInterRatHoCapable;
     /**
      * Time limit before a _connection request timeout_ occurs. Set after a new
      * UE context is added after a successful Random Access. Calling
@@ -627,7 +756,12 @@ class UeManager : public Object
      * UE CONTEXT RELEASE is received.
      */
     EventId m_handoverLeavingTimeout;
+    td::vector < Ptr<Packet> > m_x2forwardingBuffer;
+    uint32_t m_x2forwardingBufferSize;
+    uint32_t m_maxx2forwardingBufferSize;
 
+    // this variable is set to true if on initial access, for mc devices, all the mmWave eNBs are in outage
+    bool m_allMmWaveInOutageAtInitialAccess;
     /// Define if the Carrier Aggregation was already configure for the current UE on not
     bool m_caSupportConfigured;
 
@@ -670,6 +804,7 @@ class LteEnbRrc : public Object
     friend class EpcX2SpecificEpcX2SapUser<LteEnbRrc>;
     /// allow UeManager class friend access
     friend class UeManager;
+    friend class MemberLteEnbCphySapUser<LteEnbRrc>;
     /// allow  MemberLteCcmRrcSapUser<LteEnbRrc> class friend access
     friend class MemberLteCcmRrcSapUser<LteEnbRrc>;
 
@@ -684,6 +819,19 @@ class LteEnbRrc : public Object
      * Destructor
      */
     ~LteEnbRrc() override;
+    /**
+   * Each instance of this struct is associated to a mmWave CC and contains the
+   * parameters needed by the RRC.
+   * When LteEnbRrc::ConfigureMmWaveCarriers () is called, a map of
+   * MmWaveComponentCarrierConf objects is stored in the
+   * m_mmWaveComponentCarrierPhyConf variable.
+   */
+  struct MmWaveComponentCarrierConf
+  {
+    uint8_t m_ccId;       ///< mmWave component carrier ID
+    uint16_t m_cellId;    ///< cell ID
+    uint32_t m_bandwidth; ///< bandwidth
+  };
 
     // inherited from Object
   protected:
@@ -708,11 +856,30 @@ class LteEnbRrc : public Object
      */
     EpcX2SapUser* GetEpcX2SapUser();
 
+      /**
+      * set the CMAC SAP this RRC should interact with
+      *
+      * \param s the CMAC SAP Provider to be used by this RRC
+      */
+      /**
+    * Set the X2 PDCP Provider this RRC should pass to PDCP layers
+    * \param s the X2 PDCP Provider to be stored in this RRC entity
+    */
+    void SetEpcX2PdcpProvider (EpcX2PdcpProvider* s);
+    EpcX2PdcpProvider* GetEpcX2PdcpProvider () const;
+
     /**
-     * set the CMAC SAP this RRC should interact with
-     *
-     * \param s the CMAC SAP Provider to be used by this RRC
-     */
+    * Set the X2 RLC Provider this RRC should pass to RLC layers
+    * \param s the X2 RLC Provider to be stored in this RRC entity
+    */
+    void SetEpcX2RlcProvider (EpcX2RlcProvider* s);
+    EpcX2RlcProvider* GetEpcX2RlcProvider() const;
+
+    /**
+    * set the CMAC SAP this RRC should interact with
+    *
+    * \param s the CMAC SAP Provider to be used by this RRC
+    */
     void SetLteEnbCmacSapProvider(LteEnbCmacSapProvider* s);
 
     /**
@@ -1059,6 +1226,7 @@ class LteEnbRrc : public Object
      *  This function acts as an interface to trigger the connection
      *  release towards eNB, EPC and UE.
      */
+     
     void SendRrcConnectionRelease();
 
     /**
@@ -1120,6 +1288,8 @@ class LteEnbRrc : public Object
                                                 const uint16_t rnti,
                                                 const LteRrcSap::MeasurementReport report);
 
+    typedef void (* NotifyMmWaveSinrTracedCallback)
+     (uint64_t imsi, uint16_t cellId, long double sinr);
     /**
      * TracedCallback signature for timer expiry events
      *
@@ -1143,6 +1313,40 @@ class LteEnbRrc : public Object
     typedef void (*HandoverFailureTracedCallback)(const uint64_t imsi,
                                                   const uint16_t rnti,
                                                   const uint16_t cellId);
+      /**
+    * Different secondary cell handover modes
+    */
+   enum HandoverMode
+   {
+     FIXED_TTT = 1,
+     DYNAMIC_TTT = 2,
+     THRESHOLD = 3,
+     NO_AUTOMATIC_HANDOVER = 4,
+   };
+
+   struct HandoverEventInfo
+   {
+     uint16_t sourceCellId;
+     uint16_t targetCellId;
+     EventId scheduledHandoverEvent;
+   };
+
+   /**
+    * Map with info on handover events, per imsi
+    */
+   typedef std::map<uint64_t, HandoverEventInfo> HandoverEventMap;
+
+   /**
+    * This method maps Imsi to Rnti, so that the UeManager of a certain UE
+    * can be retrieved also with the Imsi
+    */
+   void RegisterImsiToRnti(uint64_t imsi, uint16_t rnti);
+
+   uint16_t GetRntiFromImsi(uint64_t imsi);
+
+   uint64_t GetImsiFromRnti(uint16_t rnti);
+
+   void SetInterRatHoMode ();                                            
 
   private:
     // RRC SAP methods
@@ -1256,6 +1460,29 @@ class LteEnbRrc : public Object
      *
      * \param params EpcX2SapUser::HandoverRequestParams
      */
+     void DoRecvRrcSecondaryCellInitialAccessSuccessful (uint16_t rnti, uint16_t mmWaveRnti, uint16_t mmWaveCellId);
+  // S1 SAP methods
+
+  /**
+   * Data radio beaerer setup request function
+   *
+   * \param params EpcEnbS1SapUser::DataRadioBearerSetupRequestParameters
+   */
+  void DoDataRadioBearerSetupRequest (EpcEnbS1SapUser::DataRadioBearerSetupRequestParameters params);
+  /**
+   * Path switch request acknowledge function
+   *
+   * \param params EpcEnbS1SapUser::PathSwitchRequestAcknowledgeParameters
+   */
+  void DoPathSwitchRequestAcknowledge (EpcEnbS1SapUser::PathSwitchRequestAcknowledgeParameters params);
+
+  // X2 SAP methods
+
+  /**
+   * Receive handover request function
+   *
+   * \param params EpcX2SapUser::HandoverRequestParams
+   */
     void DoRecvHandoverRequest(EpcX2SapUser::HandoverRequestParams params);
     /**
      * Receive handover request acknowledge function
@@ -1304,6 +1531,11 @@ class LteEnbRrc : public Object
      *
      * \param params EpcX2SapUser::HandoverCancelParams
      */
+     void DoRecvUeSinrUpdate(EpcX2SapUser::UeImsiSinrParams params);
+  void DoRecvMcHandoverRequest(EpcX2SapUser::SecondaryHandoverParams params);
+  void DoRecvLteMmWaveHandoverCompleted (EpcX2SapUser::SecondaryHandoverParams params);
+  void DoRecvConnectionSwitchToMmWave (EpcX2SapUser::SwitchConnectionParams params);
+  void DoRecvSecondaryCellHandoverCompleted (EpcX2SapUser::SecondaryHandoverCompletedParams params);
     void DoRecvHandoverCancel(EpcX2SapUser::HandoverCancelParams params);
 
     // CMAC SAP methods
@@ -1486,6 +1718,38 @@ class LteEnbRrc : public Object
      *
      * \return the newly allocated SRS configuration index
      */
+     void TakeUeHoControl (uint64_t imsi);
+  
+  /**
+   * Triggers an handover between secondary cells
+   * @params imsi UE 
+   * @params targetCellId target cell
+   */
+  void PerformHandoverToTargetCell (uint64_t imsi, uint16_t targetCellId);
+
+  /**
+   * Set mmWave/NR BS handover status (allowed or not)
+   * @params cellId
+   * @params a boolean that is true if the cell can accept handovers, false otherwise
+   * @returns false if the cell is not in the list of known cells
+   */
+  bool SetSecondaryCellHandoverAllowedStatus (uint16_t cellId, bool hoAllowed);
+
+  /**
+   * Evict users from secondary cells that have deactivated forcing handover to another cell
+   */
+  void EvictUsersFromSecondaryCell ();
+
+private:
+
+  /**
+   * Allocate a new SRS configuration index for a new UE.
+   *
+   * \note this method can have the side effect of updating the SRS
+   * configuration index of all UEs
+   *
+   * \return the newly allocated SRS configuration index
+   */
     uint16_t GetNewSrsConfigurationIndex();
 
     /**
@@ -1511,6 +1775,7 @@ class LteEnbRrc : public Object
      * characteristics is put. Used for MAC Buffer Status Reporting purposes.
      */
     uint8_t GetLogicalChannelGroup(EpsBearer bearer);
+    uint8_t GetLogicalChannelGroup (bool isGbr);
 
     /**
      *
@@ -1527,6 +1792,51 @@ class LteEnbRrc : public Object
      *
      */
     void SendSystemInformation();
+    oid TriggerUeAssociationUpdate();
+
+  /**
+   * Trigger an handover according to certain conditions on the SINR
+   * @params the iterator on m_imsiCellSinrMap
+   * @params the sinrDifference between the current and the maxSinr cell
+   * @params the CellId of the maximum SINR cell
+   * @params the value of the SINR for this cell
+   */
+  void ThresholdBasedSecondaryCellHandover(std::map<uint64_t, CellSinrMap>::iterator imsiIter, double sinrDifference, uint16_t maxSinrCellId, double maxSinrDb);
+
+    /**
+   * Trigger an handover according to certain conditions on the SINR and the TTT
+   * @params the iterator on m_imsiCellSinrMap
+   * @params the sinrDifference between the current and the maxSinr cell
+   * @params the CellId of the maximum SINR cell
+   * @params the value of the SINR for this cell
+   */
+  void TttBasedHandover(std::map<uint64_t, CellSinrMap>::iterator imsiIter, double sinrDifference, uint16_t maxSinrCellId, double maxSinrDb);
+
+  /**
+   * Compute the TTT according to the sinrDifference and the dynamic handover algorithm
+   */
+  uint8_t ComputeTtt(double sinrDifference);
+
+  /**
+   * Method that can be scheduled to perform an handover
+   * @params imsi
+   */
+  void PerformHandover(uint64_t imsi);
+
+  /**
+   * method used to periodically check if HO between MmWave and LTE is needed
+   *
+   */
+  void UpdateUeHandoverAssociation();
+
+  /**
+   * Trigger an handover according to certain conditions on the SINR (for single-connectivity devices)
+   * @params the iterator on m_imsiCellSinrMap
+   * @params the sinrDifference between the current and the maxSinr cell
+   * @params the CellId of the maximum SINR cell
+   * @params the value of the SINR for this cell
+   */
+  void ThresholdBasedInterRatHandover(std::map<uint64_t, CellSinrMap>::iterator imsiIter, double sinrDifference, uint16_t maxSinrCellId, double maxSinrDb);
 
     Callback<void, Ptr<Packet>> m_forwardUpCallback; ///< forward up callback function
 
@@ -1534,6 +1844,10 @@ class LteEnbRrc : public Object
     EpcX2SapUser* m_x2SapUser;
     /// Interface to send messages to neighbour eNodeB over the X2 interface.
     EpcX2SapProvider* m_x2SapProvider;
+     /// Interface to be provided to PDCP
+  EpcX2PdcpProvider* m_x2PdcpProvider;
+  /// Interface to be provided to RLC
+  EpcX2RlcProvider* m_x2RlcProvider;
 
     /// Receive API calls from the eNodeB MAC instance.
     std::vector<LteEnbCmacSapUser*> m_cmacSapUser;
@@ -1580,6 +1894,10 @@ class LteEnbRrc : public Object
 
     /// True if ConfigureCell() has been completed.
     bool m_configured;
+     /// Cell identifier. Must be unique across the simulation.
+  uint16_t m_cellId;
+    /// Closest LTE Cell identifier (for MmWave cells only).
+  uint16_t m_lteCellId;
     /// Downlink E-UTRA Absolute Radio Frequency Channel Number.
     uint32_t m_dlEarfcn;
     /// Uplink E-UTRA Absolute Radio Frequency Channel Number.
@@ -1741,7 +2059,52 @@ class LteEnbRrc : public Object
      */
     TracedCallback<uint64_t, uint16_t, uint16_t, LteRrcSap::MeasurementReport>
         m_recvMeasurementReportTrace;
+     TracedCallback<uint64_t, uint16_t, long double> m_notifyMmWaveSinrTrace;
+     //mc
+  bool m_ismmWave;
+  bool m_interRatHoMode;
+  bool m_firstReport;
+
+  uint32_t m_firstSibTime;    // time in ms of initial SIB
+
+  // for MmWave eNBs
+  std::map<uint8_t, ImsiSinrMap> m_ueImsiSinrMap; // this map contains the ueImsiSinrMap reports sent by the CCs
+  bool m_reportAllUeMeas; // if true, the MmWave eNB reports to the coordinator all the received UE measures, i.e. one per CC
+
+  // for LTE eNBs
+  std::map<uint16_t, ImsiSinrMap> m_cellSinrMap;
+  uint16_t m_numNewSinrReports;
+  std::map<uint64_t, uint16_t> m_bestMmWaveCellForImsiMap;
+  std::map<uint64_t, uint16_t> m_lastMmWaveCell;
+  std::map<uint64_t, bool> m_mmWaveCellSetupCompleted;
+  std::map<uint64_t, bool> m_imsiUsingLte;
+  std::map<uint64_t, CellSinrMap> m_imsiCellSinrMap;
+  std::map<uint64_t, uint16_t> m_imsiRntiMap;
+  std::map<uint16_t, uint64_t> m_rntiImsiMap;
+
+  // sleep mode for mmWave/NR BSs controlled by the LTE eNB
+  std::map<uint16_t, bool> m_allowHandoverTo;  // cellId, true if HO is allowed, false if not
+
+  HandoverMode m_handoverMode;
+
+  // TTT based handover management
+  HandoverEventMap m_imsiHandoverEventsMap;
+
+  long double m_sinrThresholdDifference;
+
+  long double m_outageThreshold;
+
+  uint8_t m_fixedTttValue;
+  uint8_t m_minDynTttValue;
+  uint8_t m_maxDynTttValue;
+  double m_minDiffTttValue;
+  double m_maxDiffTttValue;
+
+  int m_crtPeriod;
+
+  uint32_t m_x2_received_cnt;
     /**
+    
      * The `NotifyConnectionRelease` trace source. Fired when an UE leaves the eNB.
      * Exporting IMSI, cell ID, RNTI.
      *
@@ -1785,6 +2148,9 @@ class LteEnbRrc : public Object
 
     std::map<uint8_t, Ptr<ComponentCarrierBaseStation>>
         m_componentCarrierPhyConf; ///< component carrier phy configuration
+    std::map<uint8_t, MmWaveComponentCarrierConf> m_mmWaveComponentCarrierPhyConf; ///< mmWave component carrier phy configuration
+  
+  std::set<uint64_t> m_e2ControlledUes; ///< contains a list of UEs for which HO is controlled externally 
 
 }; // end of `class LteEnbRrc`
 
