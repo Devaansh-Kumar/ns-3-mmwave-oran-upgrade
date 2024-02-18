@@ -41,32 +41,32 @@ class LteInterference : public Object
 {
   public:
     LteInterference();
-    ~LteInterference() override;
+    ~LteInterference();
 
     /**
      * \brief Get the type ID.
      * \return the object TypeId
      */
     static TypeId GetTypeId();
-    void DoDispose() override;
+    void DoDispose();
 
     /**
-     * \brief Add a LteChunkProcessor that will use the time-vs-frequency SINR
+     * Add a LteChunkProcessor that will use the time-vs-frequency SINR
      * calculated by this LteInterference instance. Note that all the
      * added LteChunkProcessors will work in parallel.
      *
      * @param p
      */
-    virtual void AddSinrChunkProcessor(Ptr<LteChunkProcessor> p);
+    void AddSinrChunkProcessor(Ptr<LteChunkProcessor> p);
 
     /**
-     * \brief Add a LteChunkProcessor that will use the time-vs-frequency
+     * Add a LteChunkProcessor that will use the time-vs-frequency
      * interference calculated by this LteInterference instance. Note
      * that all the added LteChunkProcessors will work in parallel.
      *
      * @param p
      */
-    virtual void AddInterferenceChunkProcessor(Ptr<LteChunkProcessor> p);
+    void AddInterferenceChunkProcessor(Ptr<LteChunkProcessor> p);
 
     /**
      * Add a LteChunkProcessor that will use the time-vs-frequency
@@ -75,21 +75,21 @@ class LteInterference : public Object
      *
      * @param p
      */
-    virtual void AddRsPowerChunkProcessor(Ptr<LteChunkProcessor> p);
+    void AddRsPowerChunkProcessor(Ptr<LteChunkProcessor> p);
 
     /**
      * \brief Notify that the PHY is starting a RX attempt
      *
      * @param rxPsd the power spectral density of the signal being RX
      */
-    virtual void StartRx(Ptr<const SpectrumValue> rxPsd);
+    void StartRx(Ptr<const SpectrumValue> rxPsd);
 
     /**
      * notify that the RX attempt has ended. The receiving PHY must call
      * this method when RX ends or RX is aborted.
      *
      */
-    virtual void EndRx();
+    void EndRx();
 
     /**
      * notify that a new signal is being perceived in the medium. This
@@ -99,33 +99,33 @@ class LteInterference : public Object
      * @param spd the power spectral density of the new signal
      * @param duration the duration of the new signal
      */
-    virtual void AddSignal(Ptr<const SpectrumValue> spd, const Time duration);
+    void AddSignal(Ptr<const SpectrumValue> spd, const Time duration);
 
     /**
      *
      * @param noisePsd the Noise Power Spectral Density in power units
      * (Watt, Pascal...) per Hz.
      */
-    virtual void SetNoisePowerSpectralDensity(Ptr<const SpectrumValue> noisePsd);
+    void SetNoisePowerSpectralDensity(Ptr<const SpectrumValue> noisePsd);
 
-  protected:
+  private:
     /**
      * Conditionally evaluate chunk
      */
-    virtual void ConditionallyEvaluateChunk();
+    void ConditionallyEvaluateChunk();
     /**
      * Add signal function
      *
      * @param spd the power spectral density of the new signal
      */
-    virtual void DoAddSignal(Ptr<const SpectrumValue> spd);
+    void DoAddSignal(Ptr<const SpectrumValue> spd);
     /**
      * Subtract signal
      *
      * @param spd the power spectral density of the new signal
      * @param signalId the signal ID
      */
-    virtual void DoSubtractSignal(Ptr<const SpectrumValue> spd, uint32_t signalId);
+    void DoSubtractSignal(Ptr<const SpectrumValue> spd, uint32_t signalId);
 
     bool m_receiving{false}; ///< are we receiving?
 

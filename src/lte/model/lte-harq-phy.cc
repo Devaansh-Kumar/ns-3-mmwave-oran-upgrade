@@ -170,7 +170,7 @@ LteHarqPhy::UpdateUlHarqProcessStatus(uint16_t rnti,
     }
     else
     {
-        if ((*it).second.at(0).size() == 3) // MAX HARQ RETX
+        if ((*it).second.at(7).size() == 3) // MAX HARQ RETX
         {
             // HARQ should be disabled -> discard info
             return;
@@ -208,21 +208,6 @@ LteHarqPhy::ResetUlHarqProcessStatus(uint16_t rnti, uint8_t id)
     {
         (*it).second.at(id).clear();
     }
-}
-
-void
-LteHarqPhy::ClearDlHarqBuffer(uint16_t rnti)
-{
-    NS_LOG_FUNCTION(this << rnti);
-    // flush the DL harq buffers
-    m_miDlHarqProcessesInfoMap.clear();
-    // Recreate DL Decodification HARQ buffers
-    std::vector<HarqProcessInfoList_t> dlHarqLayer0;
-    dlHarqLayer0.resize(8);
-    std::vector<HarqProcessInfoList_t> dlHarqLayer1;
-    dlHarqLayer1.resize(8);
-    m_miDlHarqProcessesInfoMap.push_back(dlHarqLayer0);
-    m_miDlHarqProcessesInfoMap.push_back(dlHarqLayer1);
 }
 
 } // namespace ns3

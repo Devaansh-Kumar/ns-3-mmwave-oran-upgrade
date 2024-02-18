@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011,2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,9 @@
  *
  * Author: Manuel Requena <manuel.requena@cttc.es>
  *         Nicola Baldo <nbaldo@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #ifndef LTE_RLC_TM_H
@@ -32,10 +36,6 @@ namespace ns3
 
 /**
  * LTE RLC Transparent Mode (TM), see 3GPP TS 36.322
- *
- * Please note that, as in TM it is not possible to add any header, the delay
- * measurements gathered from the trace source "RxPDU" of LteRlc are invalid
- * (they will be always 0)
  */
 class LteRlcTm : public LteRlc
 {
@@ -68,6 +68,8 @@ class LteRlcTm : public LteRlc
     void DoNotifyHarqDeliveryFailure() override;
     void DoReceivePdu(LteMacSapUser::ReceivePduParameters rxPduParams) override;
 
+    void DoSendMcPdcpSdu(EpcX2Sap::UeDataParams params) override;
+
   private:
     /// Expire RBS timer function
     void ExpireRbsTimer();
@@ -75,32 +77,9 @@ class LteRlcTm : public LteRlc
     void DoReportBufferStatus();
 
   private:
-    /**
-     * \brief Store an incoming (from layer above us) PDU, waiting to transmit it
-     */
-    struct TxPdu
-    {
-        /**
-         * \brief TxPdu default constructor
-         * \param pdu the PDU
-         * \param time the arrival time
-         */
-        TxPdu(const Ptr<Packet>& pdu, const Time& time)
-            : m_pdu(pdu),
-              m_waitingSince(time)
-        {
-        }
-
-        TxPdu() = delete;
-
-        Ptr<Packet> m_pdu;   ///< PDU
-        Time m_waitingSince; ///< Layer arrival time
-    };
-
-    std::vector<TxPdu> m_txBuffer; ///< Transmission buffer
-
     uint32_t m_maxTxBufferSize; ///< maximum transmit buffer size
     uint32_t m_txBufferSize;    ///< transmit buffer size
+    std::vector<TxPdu> m_txBuffer; ///< Transmission buffer
 
     EventId m_rbsTimer; ///< RBS timer
 };

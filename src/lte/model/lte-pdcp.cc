@@ -178,9 +178,6 @@ LtePdcp::DoTransmitPdcpSdu(LtePdcpSapProvider::TransmitPdcpSduParameters params)
     NS_LOG_FUNCTION(this << m_rnti << static_cast<uint16_t>(m_lcid) << params.pdcpSdu->GetSize());
     Ptr<Packet> p = params.pdcpSdu;
 
-    // Sender timestamp
-    PdcpTag pdcpTag(Simulator::Now());
-
     LtePdcpHeader pdcpHeader;
     pdcpHeader.SetSequenceNumber(m_txSequenceNumber);
 
@@ -192,9 +189,11 @@ LtePdcp::DoTransmitPdcpSdu(LtePdcpSapProvider::TransmitPdcpSduParameters params)
 
     pdcpHeader.SetDcBit(LtePdcpHeader::DATA_PDU);
     p->AddHeader(pdcpHeader);
-    p->AddByteTag(pdcpTag, 1, pdcpHeader.GetSerializedSize());
 
-    m_txPdu(m_rnti, m_lcid, p->GetSize());
+    // Sender timestamp
+    PdcpTag pdcpTag (Simulator::Now ());
+    p->AddByteTag (pdcpTag);
+    m_txPdu (m_rnti, m_lcid, p->GetSize ());
 
     LteRlcSapProvider::TransmitPdcpPduParameters txParams;
     txParams.rnti = m_rnti;
@@ -213,8 +212,10 @@ LtePdcp::DoReceivePdu(Ptr<Packet> p)
     // Receiver timestamp
     PdcpTag pdcpTag;
     Time delay;
-    p->FindFirstMatchingByteTag(pdcpTag);
-    delay = Simulator::Now() - pdcpTag.GetSenderTimestamp();
+    if (p->FindFirstMatchingByteTag (pdcpTag))
+    {
+      delay = Simulator::Now() - pdcpTag.GetSenderTimestamp ();
+    }
     m_rxPdu(m_rnti, m_lcid, p->GetSize(), delay.GetNanoSeconds());
 
     LtePdcpHeader pdcpHeader;

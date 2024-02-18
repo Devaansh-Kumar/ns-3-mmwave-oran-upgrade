@@ -145,12 +145,6 @@ class NoOpComponentCarrierManager : public LteEnbComponentCarrierManager
      */
     virtual void DoUlReceiveMacCe(MacCeListElement_s bsr, uint8_t componentCarrierId);
     /**
-     * \brief Forward uplink SR to CCM, called by MAC through CCM SAP interface.
-     * \param rnti RNTI of the UE that requested SR
-     * \param componentCarrierId the component carrier ID that forwarded the SR
-     */
-    virtual void DoUlReceiveSr(uint16_t rnti, uint8_t componentCarrierId);
-    /**
      * \brief Function implements the function of the SAP interface of CCM instance which is used by
      * MAC to notify the PRB occupancy reported by scheduler.
      * \param prbOccupancy the PRB occupancy
@@ -180,12 +174,9 @@ class RrComponentCarrierManager : public NoOpComponentCarrierManager
 
   protected:
     // Inherited methods
-    void DoReportBufferStatus(LteMacSapProvider::ReportBufferStatusParameters params) override;
-    void DoUlReceiveMacCe(MacCeListElement_s bsr, uint8_t componentCarrierId) override;
-    void DoUlReceiveSr(uint16_t rnti, uint8_t componentCarrierId) override;
+    virtual void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
+    virtual void DoUlReceiveMacCe (MacCeListElement_s bsr, uint8_t componentCarrierId);
 
-  private:
-    uint8_t m_lastCcIdForSr{0}; //!< Last CCID to which a SR was routed
 };                              // end of class RrComponentCarrierManager
 
 } // end of namespace ns3

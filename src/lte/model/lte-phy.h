@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,9 @@
  * Author: Giuseppe Piro  <g.piro@poliba.it>
  *         Marco Miozzo <mmiozzo@cttc.es>
  *         Nicola Baldo <nbaldo@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #ifndef LTE_PHY_H
@@ -74,12 +78,12 @@ class LtePhy : public Object
      * \brief Set the device where the phy layer is attached
      * \param d the device
      */
-    void SetDevice(Ptr<LteNetDevice> d);
+    void SetDevice(Ptr<NetDevice> d);
     /**
      * \brief Get the device where the phy layer is attached
      * \return the pointer to the device
      */
-    Ptr<LteNetDevice> GetDevice() const;
+    Ptr<NetDevice> GetDevice() const;
 
     /**
      *
@@ -221,7 +225,7 @@ class LtePhy : public Object
 
   protected:
     /// Pointer to the NetDevice where this PHY layer is attached.
-    Ptr<LteNetDevice> m_netDevice;
+    Ptr<NetDevice> m_netDevice;
 
     /**
      * The downlink LteSpectrumPhy associated to this LtePhy. Also available as
@@ -258,12 +262,12 @@ class LtePhy : public Object
      * The UL bandwidth in number of PRBs.
      * Specified by the upper layer through CPHY SAP.
      */
-    uint16_t m_ulBandwidth;
+    uint8_t m_ulBandwidth;
     /**
      * The DL bandwidth in number of PRBs.
      * Specified by the upper layer through CPHY SAP.
      */
-    uint16_t m_dlBandwidth;
+    uint8_t m_dlBandwidth;
     /// The RB group size according to the bandwidth.
     uint8_t m_rbgSize;
     /**

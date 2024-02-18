@@ -600,7 +600,7 @@ PssFfMacScheduler::DoSchedDlTriggerReq(
         newRar.m_grant.m_cqiRequest = false;
         newRar.m_grant.m_ulDelay = false;
         NS_LOG_INFO(this << " UL grant allocated to RNTI " << (*itRach).m_rnti << " rbStart "
-                         << rbStart << " rbLen " << rbLen << " MCS " << (uint16_t)m_ulGrantMcs
+                         << rbStart << " rbLen " << rbLen << " MCS " << m_ulGrantMcs
                          << " tbSize " << newRar.m_grant.m_tbSize);
         for (uint16_t i = rbStart; i < rbStart + rbLen; i++)
         {

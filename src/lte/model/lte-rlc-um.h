@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Manuel Requena <manuel.requena@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #ifndef LTE_RLC_UM_H
@@ -24,6 +28,7 @@
 #include "lte-rlc.h"
 
 #include <ns3/event-id.h>
+#include <ns3/epc-x2-sap.h>
 
 #include <map>
 
@@ -45,12 +50,19 @@ class LteRlcUm : public LteRlc
     static TypeId GetTypeId();
     void DoDispose() override;
 
+    uint32_t GetMaxBuff();
+
     /**
      * RLC SAP
      *
      * \param p packet
      */
     void DoTransmitPdcpPdu(Ptr<Packet> p) override;
+
+    /**
+     * RLC EPC X2 SAP
+     */
+    void DoSendMcPdcpSdu(EpcX2Sap::UeDataParams params) override;
 
     /**
      * MAC SAP
@@ -60,6 +72,12 @@ class LteRlcUm : public LteRlc
     void DoNotifyTxOpportunity(LteMacSapUser::TxOpportunityParameters txOpParams) override;
     void DoNotifyHarqDeliveryFailure() override;
     void DoReceivePdu(LteMacSapUser::ReceivePduParameters rxPduParams) override;
+
+    std::vector < Ptr<Packet> > GetTxBuffer();
+    uint32_t GetTxBufferSize() const
+    {
+      return m_txBufferSize;
+    }
 
   private:
     /// Expire reordering timer
@@ -91,6 +109,7 @@ class LteRlcUm : public LteRlc
      * \param packet the packet
      */
     void ReassembleAndDeliver(Ptr<Packet> packet);
+    void TriggerReceivePdcpPdu(Ptr<Packet> p);
 
     /// Report buffer status
     void DoReportBufferStatus();
@@ -98,28 +117,6 @@ class LteRlcUm : public LteRlc
   private:
     uint32_t m_maxTxBufferSize; ///< maximum transmit buffer status
     uint32_t m_txBufferSize;    ///< transmit buffer size
-
-    /**
-     * \brief Store an incoming (from layer above us) PDU, waiting to transmit it
-     */
-    struct TxPdu
-    {
-        /**
-         * \brief TxPdu default constructor
-         * \param pdu the PDU
-         * \param time the arrival time
-         */
-        TxPdu(const Ptr<Packet>& pdu, const Time& time)
-            : m_pdu(pdu),
-              m_waitingSince(time)
-        {
-        }
-
-        TxPdu() = delete;
-
-        Ptr<Packet> m_pdu;   ///< PDU
-        Time m_waitingSince; ///< Layer arrival time
-    };
 
     std::vector<TxPdu> m_txBuffer;              ///< Transmission buffer
     std::map<uint16_t, Ptr<Packet>> m_rxBuffer; ///< Reception buffer
@@ -144,7 +141,6 @@ class LteRlcUm : public LteRlc
     /**
      * Timers. See section 7.3 in TS 36.322
      */
-    Time m_reorderingTimerValue;        ///< reordering timer value
     EventId m_reorderingTimer;          ///< reordering timer
     EventId m_rbsTimer;                 ///< RBS timer
     bool m_enablePdcpDiscarding{false}; //!< whether to use the PDCP discarding (perform discarding
@@ -168,6 +164,9 @@ class LteRlcUm : public LteRlc
      * Expected Sequence Number
      */
     SequenceNumber10 m_expectedSeqNumber;
+
+    Time m_rbsTimerValue;
+    Time m_reorderingTimerValue;
 };
 
 } // namespace ns3

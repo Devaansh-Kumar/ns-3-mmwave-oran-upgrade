@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,6 +19,9 @@
  * Modified by:
  *          Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *          Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #ifndef RRC_HEADER_H
@@ -71,14 +75,14 @@ class RrcAsn1Header : public Asn1Header
      * \param bandwidth Bandwidth in RBs: 6, 15, 25, 50, 75, 100
      * \returns ENUMERATED value: 0, 1, 2, 3, 4, 5
      */
-    int BandwidthToEnum(uint16_t bandwidth) const;
+    int BandwidthToEnum(uint8_t bandwidth) const;
     /**
      * Convert from ENUMERATED value to bandwidth (in RBs)
      *
      * \param n ENUMERATED value: 0, 1, 2, 3, 4, 5
      * \returns bandwidth Bandwidth in RBs: 6, 15, 25, 50, 75, 100
      */
-    uint16_t EnumToBandwidth(int n) const;
+    uint8_t EnumToBandwidth(int n) const;
 
     // Serialization functions
     /**
@@ -580,6 +584,8 @@ class RrcConnectionRequestHeader : public RrcUlCcchMessage
      */
     std::bitset<32> GetMtmsi() const;
 
+    std::bitset<1> GetIsMc () const;
+
   private:
     std::bitset<8> m_mmec;   ///< MMEC
     std::bitset<32> m_mTmsi; ///< TMSI
@@ -598,6 +604,77 @@ class RrcConnectionRequestHeader : public RrcUlCcchMessage
     } m_establishmentCause; ///< the establishent cause
 
     std::bitset<1> m_spare; ///< spare bit
+};
+
+class RrcConnectToMmWaveHeader : public RrcDlCcchMessage
+{
+public:
+  RrcConnectToMmWaveHeader();
+  ~RrcConnectToMmWaveHeader();
+
+  // Inherited from RrcAsn1Header
+  static TypeId GetTypeId (void);
+  void PreSerialize () const;
+  uint32_t Deserialize (Buffer::Iterator bIterator);
+  void Print (std::ostream &os) const;
+
+/**
+//TODO doc
+*/
+void SetMessage (uint16_t mmWaveId);
+
+uint16_t GetMessage () const;
+
+private:
+std::bitset<16> m_mmWaveId;
+};
+
+class RrcNotifySecondaryConnectedHeader : public RrcUlDcchMessage
+{
+public:
+RrcNotifySecondaryConnectedHeader();
+~RrcNotifySecondaryConnectedHeader();
+
+// Inherited from RrcAsn1Header
+static TypeId GetTypeId (void);
+void PreSerialize () const;
+uint32_t Deserialize (Buffer::Iterator bIterator);
+void Print (std::ostream &os) const;
+
+/**
+//TODO doc
+*/
+void SetMessage (uint16_t mmWaveId, uint16_t mmWaveRnti);
+
+std::pair<uint16_t, uint16_t> GetMessage () const;
+
+private:
+std::bitset<16> m_mmWaveId;
+std::bitset<16> m_mmWaveRnti;
+};
+
+class RrcConnectionSwitchHeader : public RrcDlDcchMessage
+{
+public:
+RrcConnectionSwitchHeader();
+~RrcConnectionSwitchHeader();
+
+// Inherited from RrcAsn1Header
+static TypeId GetTypeId (void);
+void PreSerialize () const;
+uint32_t Deserialize (Buffer::Iterator bIterator);
+void Print (std::ostream &os) const;
+
+/**
+//TODO doc
+*/
+void SetMessage (LteRrcSap::RrcConnectionSwitch msg);
+
+LteRrcSap::RrcConnectionSwitch GetMessage () const;
+uint8_t GetRrcTransactionIdentifier () const;
+
+private:
+mutable LteRrcSap::RrcConnectionSwitch m_msg;
 };
 
 /**

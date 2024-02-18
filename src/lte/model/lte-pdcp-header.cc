@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Manuel Requena <manuel.requena@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #include "lte-pdcp-header.h"
@@ -99,7 +103,7 @@ LtePdcpHeader::Serialize(Buffer::Iterator start) const
     Buffer::Iterator i = start;
 
     i.WriteU8((m_dcBit << 7) | (m_sequenceNumber & 0x0F00) >> 8);
-    i.WriteU8(m_sequenceNumber & 0x00FF);
+    i.WriteU8 ( (uint8_t)(m_sequenceNumber & 0x00FF) );
 }
 
 uint32_t
@@ -112,8 +116,8 @@ LtePdcpHeader::Deserialize(Buffer::Iterator start)
     byte_1 = i.ReadU8();
     byte_2 = i.ReadU8();
     m_dcBit = (byte_1 & 0x80) > 7;
-    // For now, we just support DATA PDUs
-    NS_ASSERT(m_dcBit == DATA_PDU);
+    // HACKED. ENABLE THIS TO DISTINGUISH DATA_PDU and CONTROL_PDU in lte-enb-rrc.cc, lossless HO func
+    //NS_ASSERT (m_dcBit == DATA_PDU);
     m_sequenceNumber = ((byte_1 & 0x0F) << 8) | byte_2;
 
     return GetSerializedSize();

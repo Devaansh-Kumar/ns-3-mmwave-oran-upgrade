@@ -364,7 +364,7 @@ LteFrHardAlgorithm::DoGetTpc(uint16_t rnti)
               // Table 5.1.1.1-2
 }
 
-uint16_t
+uint8_t
 LteFrHardAlgorithm::DoGetMinContinuousUlBandwidth()
 {
     NS_LOG_FUNCTION(this);

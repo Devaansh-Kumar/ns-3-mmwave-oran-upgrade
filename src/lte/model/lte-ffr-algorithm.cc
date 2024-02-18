@@ -78,7 +78,7 @@ LteFfrAlgorithm::DoDispose()
     NS_LOG_FUNCTION(this);
 }
 
-uint16_t
+uint8_t
 LteFfrAlgorithm::GetUlBandwidth() const
 {
     NS_LOG_FUNCTION(this);
@@ -88,7 +88,7 @@ LteFfrAlgorithm::GetUlBandwidth() const
 void
 LteFfrAlgorithm::SetUlBandwidth(uint16_t bw)
 {
-    NS_LOG_FUNCTION(this << bw);
+    NS_LOG_FUNCTION(this << uint16_t (bw));
     switch (bw)
     {
     case 6:
@@ -101,12 +101,12 @@ LteFfrAlgorithm::SetUlBandwidth(uint16_t bw)
         break;
 
     default:
-        NS_FATAL_ERROR("invalid bandwidth value " << bw);
+        NS_FATAL_ERROR("invalid bandwidth value " << uint16_t (bw));
         break;
     }
 }
 
-uint16_t
+uint8_t
 LteFfrAlgorithm::GetDlBandwidth() const
 {
     NS_LOG_FUNCTION(this);
@@ -114,9 +114,9 @@ LteFfrAlgorithm::GetDlBandwidth() const
 }
 
 void
-LteFfrAlgorithm::SetDlBandwidth(uint16_t bw)
+LteFfrAlgorithm::SetDlBandwidth(uint8_t bw)
 {
-    NS_LOG_FUNCTION(this << bw);
+    NS_LOG_FUNCTION(this << uint16_t (bw));
     switch (bw)
     {
     case 6:
@@ -129,7 +129,7 @@ LteFfrAlgorithm::SetDlBandwidth(uint16_t bw)
         break;
 
     default:
-        NS_FATAL_ERROR("invalid bandwidth value " << bw);
+        NS_FATAL_ERROR("invalid bandwidth value " << uint16_t (bw));
         break;
     }
 }
@@ -171,7 +171,7 @@ LteFfrAlgorithm::DoSetCellId(uint16_t cellId)
 }
 
 void
-LteFfrAlgorithm::DoSetBandwidth(uint16_t ulBandwidth, uint16_t dlBandwidth)
+LteFfrAlgorithm::DoSetBandwidth(uint8_t ulBandwidth, uint8_t dlBandwidth)
 {
     NS_LOG_FUNCTION(this);
     SetDlBandwidth(dlBandwidth);

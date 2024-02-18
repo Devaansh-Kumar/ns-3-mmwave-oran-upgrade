@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, 2018, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +16,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Manuel Requena <manuel.requena@cttc.es>
+ *
+ * Modified by Michele Polese <michele.polese@gmail.com> to add DC functionalities
+ *
+ * Modified by: Tommaso Zugno <tommasozugno@gmail.com>
+ *              Integration of Carrier Aggregation for the mmWave module
  */
 
 #ifndef LTE_RLC_AM_H
@@ -24,9 +30,13 @@
 #include "lte-rlc.h"
 
 #include <ns3/event-id.h>
+#include <ns3/epc-x2-sap.h>
+#include <ns3/lte-pdcp-header.h>
 
-#include <map>
 #include <vector>
+#include <map>
+#include <fstream>
+#include <string>
 
 namespace ns3
 {
@@ -46,6 +56,12 @@ class LteRlcAm : public LteRlc
     static TypeId GetTypeId();
     void DoDispose() override;
 
+    struct RetxPdu
+    {
+      Ptr<Packet> m_pdu;
+      uint16_t    m_retxCount;
+    };
+
     /**
      * RLC SAP
      *
@@ -53,6 +69,42 @@ class LteRlcAm : public LteRlc
      */
     void DoTransmitPdcpPdu(Ptr<Packet> p) override;
 
+    /**
+     * RLC EPC X2 SAP
+     */
+    void DoSendMcPdcpSdu(EpcX2Sap::UeDataParams params) override;
+
+    // LL HO
+    std::vector < Ptr<Packet> > GetTxBuffer();
+    uint32_t GetTxBufferSize() const;
+
+    std::vector < RetxPdu > GetTxedBuffer();
+    uint32_t GetTxedBufferSize() const;
+
+    std::vector < RetxPdu > GetRetxBuffer();
+    uint32_t GetRetxBufferSize() const;
+
+    std::map < uint32_t, Ptr<Packet> > GetTransmittingRlcSduBuffer();
+    uint32_t GetTransmittingRlcSduBufferSize() const;
+
+    Ptr<Packet> GetSegmentedRlcsdu();
+    ///< translate a vector of Rlc PDUs to Rlc SDUs
+    ///< and put the Rlc SDUs into m_transmittingRlcSdus.
+    void  RlcPdusToRlcSdus (std::vector < RetxPdu >  Pdus);
+
+    std::vector < Ptr<Packet> > GetTxedRlcSduBuffer (){
+      return m_txedRlcSduBuffer;
+    }
+    
+  private:
+    //whether the last SDU in the txonBuffer is a complete SDU.
+    bool is_fragmented;
+
+    //
+    std::vector < Ptr <Packet> > m_txedRlcSduBuffer;
+    uint32_t m_txedRlcSduBufferSize;
+
+  public:
     /**
      * MAC SAP
      *
@@ -63,6 +115,8 @@ class LteRlcAm : public LteRlc
      * Notify HARQ delivery failure
      */
     void DoNotifyHarqDeliveryFailure() override;
+    void DoNotifyDlHarqDeliveryFailure (uint8_t harqId) override;
+    void DoNotifyUlHarqDeliveryFailure (uint8_t harqId) override;
     void DoReceivePdu(LteMacSapUser::ReceivePduParameters rxPduParams) override;
 
   private:
@@ -90,6 +144,13 @@ class LteRlcAm : public LteRlc
      * \returns true is inside receiving window
      */
     bool IsInsideReceivingWindow(SequenceNumber10 seqNumber);
+    
+    // LL HO
+    bool IsInsideTransmittingWindow ();
+    //Create RlcSduBuffer <seqNumber, RlcSDU> based on m_transmittingRlcSdus.
+    //The buffer is ascending ordered on sequence number.
+    void CreateRlcSduBuffer ();
+
     //
     //   void ReassembleOutsideWindow ();
     //   void ReassembleSnLessThan (uint16_t seqNumber);
@@ -101,49 +162,49 @@ class LteRlcAm : public LteRlc
      * \param packet the packet
      */
     void ReassembleAndDeliver(Ptr<Packet> packet);
+    void TriggerReceivePdcpPdu(Ptr<Packet> p);
+
+    void Reassemble (Ptr<Packet> Packet);
 
     /**
      * Report buffer status
      */
     void DoReportBufferStatus();
 
+    std::string GetBufferSizeFilename();
+    void SetBufferSizeFilename(std::string filename);
+    void BufferSizeTrace();
+
   private:
-    /**
-     * \brief Store an incoming (from layer above us) PDU, waiting to transmit it
-     */
-    struct TxPdu
+    std::vector < Ptr<Packet> > m_txonBuffer; ///< Transmission buffer
+
+    struct RetxSegPdu
     {
-        /**
-         * \brief TxPdu default constructor
-         * \param pdu the PDU
-         * \param time the arrival time
-         */
-        TxPdu(const Ptr<Packet>& pdu, const Time& time)
-            : m_pdu(pdu),
-              m_waitingSince(time)
-        {
-        }
-
-        TxPdu() = delete;
-
-        Ptr<Packet> m_pdu;   ///< PDU
-        Time m_waitingSince; ///< Layer arrival time
+      Ptr<Packet> m_pdu; ///< PDU
+      uint16_t    m_retxCount; ///< retransmit count
+      bool      m_lastSegSent;    // all segments sent, waiting for ACK
     };
 
-    std::vector<TxPdu> m_txonBuffer; ///< Transmission buffer
+    // LL HO: store a complete version of the incomplete RLC SDU at the
+    // edge of the m_txonBuffer during the segmentation process.
+    // This SDU will be forwarded to target eNB in lossless HO
+    // to assure no packet is lost.
+    Ptr<Packet> m_segmented_rlcsdu;
 
-    /// RetxPdu structure
-    struct RetxPdu
-    {
-        Ptr<Packet> m_pdu;    ///< PDU
-        uint16_t m_retxCount; ///< retransmit count
-        Time m_waitingSince;  ///< Layer arrival time
-    };
 
     std::vector<RetxPdu> m_txedBuffer; ///< Buffer for transmitted and retransmitted PDUs
                                        ///< that have not been acked but are not considered
                                        ///< for retransmission
     std::vector<RetxPdu> m_retxBuffer; ///< Buffer for PDUs considered for retransmission
+    std::vector <RetxSegPdu> m_retxSegBuffer;  // buffer for AM PDU segments
+
+    Ptr<CoDelQueueDisc> m_txonQueue;
+
+    ///< LL HO: stores RLC SDUs that is not acked
+    ///< and forwarded to target eNB during lossless handover.
+    std::vector < Ptr<Packet> > m_transmittingRlcSdus;
+    uint32_t m_transmittingRlcSduBufferSize;
+    std::map <uint32_t, Ptr <Packet> > m_transmittingRlcSduBuffer;
 
     uint32_t m_maxTxBufferSize; ///< maximum transmission buffer size
     uint32_t m_txonBufferSize;  ///< transmit on buffer size
@@ -160,6 +221,8 @@ class LteRlcAm : public LteRlc
         std::list<Ptr<Packet>> m_byteSegments; ///< byte segments
 
         bool m_pduComplete; ///< PDU complete?
+        uint16_t  m_totalSize;
+        uint16_t  m_currSize;
     };
 
     std::map<uint16_t, PduBuffer> m_rxonBuffer; ///< Reception buffer
@@ -170,6 +233,7 @@ class LteRlcAm : public LteRlc
     //   std::vector < Ptr<Packet> > m_reasBuffer;     // Reassembling buffer
     //
     std::list<Ptr<Packet>> m_sdusBuffer; ///< List of SDUs in a packet (PDU)
+    std::list < Ptr<Packet> > m_sdusAssembleBuffer;
 
     /**
      * State variables. See section 7.1 in TS 36.322
