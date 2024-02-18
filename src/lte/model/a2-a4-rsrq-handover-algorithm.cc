@@ -23,7 +23,6 @@
  * Converted to handover algorithm interface by:
  *   Budiarto Herman <budiarto.herman@magister.fi>
  */
-
 #include "a2-a4-rsrq-handover-algorithm.h"
 
 #include <ns3/log.h>
