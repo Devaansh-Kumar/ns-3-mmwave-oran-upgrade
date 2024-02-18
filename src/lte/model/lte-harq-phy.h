@@ -140,13 +140,6 @@ class LteHarqPhy : public SimpleRefCount<LteHarqPhy>
      */
     void ResetUlHarqProcessStatus(uint16_t rnti, uint8_t id);
 
-    /**
-     * \brief Clear the downlink HARQ buffer
-     *
-     * \param rnti the RNTI of the UE
-     */
-    void ClearDlHarqBuffer(uint16_t rnti);
-
   private:
     std::vector<std::vector<HarqProcessInfoList_t>>
         m_miDlHarqProcessesInfoMap; ///< MI DL HARQ processes info map

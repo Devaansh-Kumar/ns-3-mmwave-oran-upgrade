@@ -83,7 +83,7 @@ NoOpComponentCarrierManager::DoTransmitPdu(LteMacSapProvider::TransmitPduParamet
     NS_LOG_FUNCTION(this);
     auto it = m_macSapProvidersMap.find(params.componentCarrierId);
     NS_ASSERT_MSG(it != m_macSapProvidersMap.end(),
-                  "could not find Sap for ComponentCarrier " << params.componentCarrierId);
+                  "could not find Sap for ComponentCarrier " << (uint32_t)params.componentCarrierId);
     // with this algorithm all traffic is on Primary Carrier
     it->second->TransmitPdu(params);
 }
@@ -357,18 +357,6 @@ NoOpComponentCarrierManager::DoUlReceiveMacCe(MacCeListElement_s bsr, uint8_t co
     }
 }
 
-void
-NoOpComponentCarrierManager::DoUlReceiveSr(uint16_t rnti, uint8_t componentCarrierId)
-{
-    NS_LOG_FUNCTION(this);
-
-    auto sapIt = m_ccmMacSapProviderMap.find(componentCarrierId);
-    NS_ABORT_MSG_IF(sapIt == m_ccmMacSapProviderMap.end(),
-                    "Sap not found in the CcmMacSapProviderMap");
-
-    sapIt->second->ReportSrToScheduler(rnti);
-}
-
 //////////////////////////////////////////
 
 NS_OBJECT_ENSURE_REGISTERED(RrComponentCarrierManager);
@@ -414,7 +402,17 @@ RrComponentCarrierManager::DoReportBufferStatus(
         {
             NS_ASSERT_MSG(m_macSapProvidersMap.find(i) != m_macSapProvidersMap.end(),
                           "Mac sap provider does not exist.");
-            m_macSapProvidersMap.at(i)->ReportBufferStatus(params);
+            if ( i==0 )
+            {
+                // only the PCC sends STATUS PDUs
+                m_macSapProvidersMap.find(i)->second->ReportBufferStatus(params);
+            }
+            else
+            {
+                LteMacSapProvider::ReportBufferStatusParameters newParams = params;
+                newParams.statusPduSize = 0;
+                m_macSapProvidersMap.find(i)->second->ReportBufferStatus(newParams);
+            }
         }
     }
 }
@@ -470,22 +468,6 @@ RrComponentCarrierManager::DoUlReceiveMacCe(MacCeListElement_s bsr, uint8_t comp
     {
         auto ueManager = m_ccmRrcSapUser->GetUeManager(bsr.m_rnti);
         m_ccmMacSapProviderMap.at(ueManager->GetComponentCarrierId())->ReportMacCeToScheduler(bsr);
-    }
-}
-
-void
-RrComponentCarrierManager::DoUlReceiveSr(uint16_t rnti, uint8_t /* componentCarrierId */)
-{
-    NS_LOG_FUNCTION(this);
-    // split traffic in uplink equally among carriers
-    uint32_t numberOfCarriersForUe = m_ueInfo.at(rnti).m_enabledComponentCarrier;
-
-    m_ccmMacSapProviderMap.find(m_lastCcIdForSr)->second->ReportSrToScheduler(rnti);
-
-    m_lastCcIdForSr++;
-    if (m_lastCcIdForSr > numberOfCarriersForUe - 1)
-    {
-        m_lastCcIdForSr = 0;
     }
 }
 

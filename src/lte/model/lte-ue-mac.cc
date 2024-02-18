@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, 2018, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,12 @@
  *
  * Author: Nicola Baldo  <nbaldo@cttc.es>
  * Author: Marco Miozzo <mmiozzo@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
+ *
+ * Modified by: Tommaso Zugno <tommasozugno@gmail.com>
+ *                 Integration of Carrier Aggregation for the mmWave module
  */
 
 #include "lte-ue-mac.h"
@@ -66,8 +73,6 @@ class UeMemberLteUeCmacSapProvider : public LteUeCmacSapProvider
                LteMacSapUser* msu) override;
     void RemoveLc(uint8_t lcId) override;
     void Reset() override;
-    void NotifyConnectionSuccessful() override;
-    void SetImsi(uint64_t imsi) override;
 
   private:
     LteUeMac* m_mac; ///< the UE MAC
@@ -122,19 +127,6 @@ UeMemberLteUeCmacSapProvider::Reset()
     m_mac->DoReset();
 }
 
-void
-UeMemberLteUeCmacSapProvider::NotifyConnectionSuccessful()
-{
-    m_mac->DoNotifyConnectionSuccessful();
-}
-
-void
-UeMemberLteUeCmacSapProvider::SetImsi(uint64_t imsi)
-{
-    m_mac->DoSetImsi(imsi);
-}
-
-/// UeMemberLteMacSapProvider class
 class UeMemberLteMacSapProvider : public LteMacSapProvider
 {
   public:
@@ -170,9 +162,6 @@ UeMemberLteMacSapProvider::ReportBufferStatus(ReportBufferStatusParameters param
     m_mac->DoReportBufferStatus(params);
 }
 
-/**
- * UeMemberLteUePhySapUser
- */
 class UeMemberLteUePhySapUser : public LteUePhySapUser
 {
   public:
@@ -226,11 +215,7 @@ LteUeMac::GetTypeId()
         TypeId("ns3::LteUeMac")
             .SetParent<Object>()
             .SetGroupName("Lte")
-            .AddConstructor<LteUeMac>()
-            .AddTraceSource("RaResponseTimeout",
-                            "trace fired upon RA response timeout",
-                            MakeTraceSourceAccessor(&LteUeMac::m_raResponseTimeoutTrace),
-                            "ns3::LteUeMac::RaResponseTimeoutTracedCallback")
+            .AddConstructor<LteUeMac> ();
 
         ;
     return tid;
@@ -242,7 +227,6 @@ LteUeMac::LteUeMac()
       m_freshUlBsr(false),
       m_harqProcessId(0),
       m_rnti(0),
-      m_imsi(0),
       m_rachConfigured(false),
       m_waitingForRaResponse(false)
 
@@ -373,6 +357,7 @@ LteUeMac::SendReportBufferStatus()
     for (auto it = m_ulBsrReceived.begin(); it != m_ulBsrReceived.end(); it++)
     {
         uint8_t lcid = it->first;
+        NS_LOG_INFO("LTE lcid of BSR " << (uint16_t)lcid << " queue size " << (*it).second.txQueueSize);
         auto lcInfoMapIt = m_lcInfoMap.find(lcid);
         NS_ASSERT(lcInfoMapIt != m_lcInfoMap.end());
         NS_ASSERT_MSG((lcid != 0) ||
@@ -412,6 +397,7 @@ LteUeMac::RandomlySelectAndSendRaPreamble()
 void
 LteUeMac::SendRaPreamble(bool contention)
 {
+    NS_LOG_INFO("SendRaPreamble " << (uint16_t)m_raPreambleId << " contention " << contention);
     NS_LOG_FUNCTION(this << (uint32_t)m_raPreambleId << contention);
     // Since regular UL LteControlMessages need m_ulConfigured = true in
     // order to be sent by the UE, the rach preamble needs to be sent
@@ -489,11 +475,6 @@ LteUeMac::RaResponseTimeout(bool contention)
     m_waitingForRaResponse = false;
     // 3GPP 36.321 5.1.4
     ++m_preambleTransmissionCounter;
-    // fire RA response timeout trace
-    m_raResponseTimeoutTrace(m_imsi,
-                             contention,
-                             m_preambleTransmissionCounter,
-                             m_rachConfig.preambleTransMax + 1);
     if (m_preambleTransmissionCounter == m_rachConfig.preambleTransMax + 1)
     {
         NS_LOG_INFO("RAR timeout, preambleTransMax reached => giving up");
@@ -541,24 +522,16 @@ LteUeMac::DoSetRnti(uint16_t rnti)
 }
 
 void
-LteUeMac::DoSetImsi(uint64_t imsi)
-{
-    NS_LOG_FUNCTION(this);
-    m_imsi = imsi;
-}
-
-void
 LteUeMac::DoStartNonContentionBasedRandomAccessProcedure(uint16_t rnti,
                                                          uint8_t preambleId,
                                                          uint8_t prachMask)
 {
-    NS_LOG_FUNCTION(this << rnti << (uint16_t)preambleId << (uint16_t)prachMask);
+    NS_LOG_FUNCTION (this << " rnti" << rnti);
     NS_ASSERT_MSG(prachMask == 0,
                   "requested PRACH MASK = " << (uint32_t)prachMask
                                             << ", but only PRACH MASK = 0 is supported");
     m_rnti = rnti;
     m_raPreambleId = preambleId;
-    m_preambleTransmissionCounter = 0;
     bool contention = false;
     SendRaPreamble(contention);
 }
@@ -569,9 +542,10 @@ LteUeMac::DoAddLc(uint8_t lcId,
                   LteMacSapUser* msu)
 {
     NS_LOG_FUNCTION(this << " lcId" << (uint32_t)lcId);
-    NS_ASSERT_MSG(m_lcInfoMap.find(lcId) == m_lcInfoMap.end(),
-                  "cannot add channel because LCID " << (uint16_t)lcId << " is already present");
+    // comment this assert in order to allow RLC updates
+    //NS_ASSERT_MSG (m_lcInfoMap.find (lcId) == m_lcInfoMap.end (), "cannot add channel because LCID " << lcId << " is already present");
 
+    NS_LOG_DEBUG("Add LC in " << m_rnti << " lcid " << (uint32_t)lcId);
     LcInfo lcInfo;
     lcInfo.lcConfig = lcConfig;
     lcInfo.macSapUser = msu;
@@ -614,17 +588,11 @@ LteUeMac::DoReset()
 }
 
 void
-LteUeMac::DoNotifyConnectionSuccessful()
-{
-    NS_LOG_FUNCTION(this);
-    m_uePhySapProvider->NotifyConnectionSuccessful();
-}
-
-void
 LteUeMac::DoReceivePhyPdu(Ptr<Packet> p)
 {
     LteRadioBearerTag tag;
     p->RemovePacketTag(tag);
+    NS_LOG_INFO("LteUeMac ReceivePhyPdu");
     if (tag.GetRnti() == m_rnti)
     {
         // packet is for the current user
@@ -641,6 +609,8 @@ LteUeMac::DoReceivePhyPdu(Ptr<Packet> p)
         {
             NS_LOG_WARN("received packet with unknown lcid " << (uint32_t)tag.GetLcid());
         }
+    } else {
+        NS_LOG_WARN("received packet with unknown rnti " << (uint32_t) tag.GetRnti ());
     }
 }
 
@@ -651,7 +621,8 @@ LteUeMac::DoReceiveLteControlMessage(Ptr<LteControlMessage> msg)
     if (msg->GetMessageType() == LteControlMessage::UL_DCI)
     {
         Ptr<UlDciLteControlMessage> msg2 = DynamicCast<UlDciLteControlMessage>(msg);
-        UlDciListElement_s dci = msg2->GetDci();
+        UlDciListElement_s dci = msg2->GetDci();NS_LOG_INFO("LTE UE MAC " << (uint32_t)m_componentCarrierId << " received UL-DCI size " << (uint32_t)dci.m_tbSize);
+
         if (dci.m_ndi == 1)
         {
             // New transmission -> empty pkt buffer queue (for deleting eventual pkts not acked )
@@ -665,15 +636,18 @@ LteUeMac::DoReceiveLteControlMessage(Ptr<LteControlMessage> msg)
                 if (((*itBsr).second.statusPduSize > 0) || ((*itBsr).second.retxQueueSize > 0) ||
                     ((*itBsr).second.txQueueSize > 0))
                 {
-                    activeLcs++;
-                    if (((*itBsr).second.statusPduSize != 0) &&
-                        ((*itBsr).second.statusPduSize < statusPduMinSize))
+                    // check if this LC is active in this LteUeMac instance
+                    if(m_lcInfoMap.find(itBsr->first) != m_lcInfoMap.end())
                     {
-                        statusPduMinSize = (*itBsr).second.statusPduSize;
-                    }
-                    if (((*itBsr).second.statusPduSize != 0) && (statusPduMinSize == 0))
-                    {
-                        statusPduMinSize = (*itBsr).second.statusPduSize;
+                        activeLcs++;
+                        if (((*itBsr).second.statusPduSize != 0)&&((*itBsr).second.statusPduSize < statusPduMinSize))
+                        {
+                            statusPduMinSize = (*itBsr).second.statusPduSize;
+                        }
+                        if (((*itBsr).second.statusPduSize != 0)&&(statusPduMinSize == 0))
+                        {
+                            statusPduMinSize = (*itBsr).second.statusPduSize;
+                        }
                     }
                 }
             }

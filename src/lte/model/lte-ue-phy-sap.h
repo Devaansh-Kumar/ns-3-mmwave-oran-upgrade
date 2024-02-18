@@ -59,12 +59,6 @@ class LteUePhySapProvider
      * \param raRnti the RA RNTI
      */
     virtual void SendRachPreamble(uint32_t prachId, uint32_t raRnti) = 0;
-
-    /**
-     * \brief Notify PHY about the successful RRC connection
-     * establishment.
-     */
-    virtual void NotifyConnectionSuccessful() = 0;
 };
 
 /**

@@ -80,7 +80,7 @@ class LteMiErrorModel
     /**
      * \brief find the mmib (mean mutual information per bit) for different modulations of the
      * specified TB
-     * \param sinr the perceived sinr values in the whole bandwidth in Watt
+     * \param sinr the perceived sinr values in the whole bandwidth
      * \param map the active RBs for the TB
      * \param mcs the MCS of the TB
      * \return the mmib
@@ -97,7 +97,7 @@ class LteMiErrorModel
 
     /**
      * \brief run the error-model algorithm for the specified TB
-     * \param sinr the perceived sinr values in the whole bandwidth in Watt
+     * \param sinr the perceived sinr values in the whole bandwidth
      * \param map the active RBs for the TB
      * \param size the size in bytes of the TB
      * \param mcs the MCS of the TB
@@ -112,7 +112,7 @@ class LteMiErrorModel
 
     /**
      * \brief run the error-model algorithm for the specified PCFICH+PDCCH channels
-     * \param sinr the perceived sinr values in the whole bandwidth in Watt
+     * \param sinr the perceived sinr values in the whole bandwidth
      * \return the decodification error of the PCFICH+PDCCH channels
      */
     static double GetPcfichPdcchError(const SpectrumValue& sinr);

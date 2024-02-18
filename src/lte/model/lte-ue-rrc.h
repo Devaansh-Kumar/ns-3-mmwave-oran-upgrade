@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
- * Copyright (c) 2018 Fraunhofer ESK : RLF extensions
+ * Copyright (c) 2016, 2018, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,7 +20,10 @@
  * Modified by:
  *          Danilo Abrignani <danilo.abrignani@unibo.it> (Carrier Aggregation - GSoC 2015)
  *          Biljana Bojovic <biljana.bojovic@cttc.es> (Carrier Aggregation)
- *          Vignesh Babu <ns3-dev@esk.fraunhofer.de> (RLF extensions)
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
+ * Modified by: Tommaso Zugno <tommasozugno@gmail.com>
+ *              Integration of Carrier Aggregation for the mmWave module
  */
 
 #ifndef LTE_UE_RRC_H
@@ -36,10 +39,17 @@
 #include <ns3/object.h>
 #include <ns3/packet.h>
 #include <ns3/traced-callback.h>
+#include <ns3/lte-radio-bearer-info.h>
 
 #include <map>
 #include <set>
 #include <vector>
+#include <ns3/lte-rlc.h>
+#include <ns3/lte-pdcp.h>
+#include <ns3/lte-rlc-am.h>
+
+#define MIN_NO_MMW_CC 1
+#define MAX_NO_MMW_CC 16 // from TR 38.802
 
 namespace ns3
 {
@@ -145,6 +155,7 @@ class LteUeRrc : public Object
      * \param s the CPHY SAP Provider
      */
     void SetLteUeCphySapProvider(LteUeCphySapProvider* s);
+    void SetMmWaveUeCphySapProvider (LteUeCphySapProvider * s);
     /**
      * set the CPHY SAP this RRC should use to interact with the PHY
      *
@@ -166,6 +177,9 @@ class LteUeRrc : public Object
      */
     LteUeCphySapUser* GetLteUeCphySapUser(uint8_t index);
 
+    void SetMmWaveUeCmacSapProvider (LteUeCmacSapProvider * s);
+
+    void SetMmWaveUeCmacSapProvider (LteUeCmacSapProvider * s, uint8_t index);
     /**
      * set the CMAC SAP this RRC should interact with
      * \brief This function is overloaded to maintain backward compatibility
@@ -214,7 +228,7 @@ class LteUeRrc : public Object
      * newly created RLC instances
      */
     void SetLteMacSapProvider(LteMacSapProvider* s);
-
+    void SetMmWaveMacSapProvider (LteMacSapProvider* s);    
     /**
      * Set the AS SAP user to interact with the NAS entity
      *
@@ -250,13 +264,6 @@ class LteUeRrc : public Object
     void SetImsi(uint64_t imsi);
 
     /**
-     * \brief Store the previous cell id
-     *
-     * \param cellId The cell id of the previous cell the UE was attached to
-     */
-    void StorePreviousCellId(uint16_t cellId);
-
-    /**
      *
      * \return imsi the unique UE identifier
      */
@@ -267,6 +274,18 @@ class LteUeRrc : public Object
      * \return the C-RNTI of the user
      */
     uint16_t GetRnti() const;
+
+    /**
+     * add an entry to the m_isMmWaveCellMap, respectively
+     * set to 1 or 0
+     */
+    void AddMmWaveCellId (uint16_t cellId);
+    void AddLteCellId (uint16_t cellId);
+
+    /**
+     * Switch lower layers' providers when connecting to a certain CellId
+     */
+    bool SwitchLowerLayerProviders (uint16_t cellId);
 
     /**
      *
@@ -305,13 +324,6 @@ class LteUeRrc : public Object
      * \return the current state
      */
     State GetState() const;
-
-    /**
-     * \brief Get the previous cell id
-     *
-     * \return The cell Id of the previous cell the UE was attached to.
-     */
-    uint16_t GetPreviousCellId() const;
 
     /**
      *
@@ -381,36 +393,6 @@ class LteUeRrc : public Object
     typedef void (*SCarrierConfiguredTracedCallback)(Ptr<LteUeRrc>,
                                                      std::list<LteRrcSap::SCellToAddMod>);
 
-    /**
-     * TracedCallback signature for in-sync and out-of-sync detection events.
-     *
-     *
-     * \param [in] imsi
-     * \param [in] rnti
-     * \param [in] cellId
-     * \param [in] type
-     * \param [in] count
-     */
-    typedef void (*PhySyncDetectionTracedCallback)(uint64_t imsi,
-                                                   uint16_t rnti,
-                                                   uint16_t cellId,
-                                                   std::string type,
-                                                   uint16_t count);
-
-    /**
-     * TracedCallback signature for imsi, cellId, rnti and counter for
-     * random access events.
-     *
-     * \param [in] imsi
-     * \param [in] cellId
-     * \param [in] rnti
-     * \param [in] count
-     */
-    typedef void (*ImsiCidRntiCountTracedCallback)(uint64_t imsi,
-                                                   uint16_t cellId,
-                                                   uint16_t rnti,
-                                                   uint8_t count);
-
   private:
     // PDCP SAP methods
     /**
@@ -463,6 +445,8 @@ class LteUeRrc : public Object
     void DoSendData(Ptr<Packet> packet, uint8_t bid);
     /// Disconnect function
     void DoDisconnect();
+    void DoNotifySecondaryCellConnected (uint16_t mmWaveRnti, uint16_t mmWaveCellId);
+    void DoNotifySecondaryCellHandover (uint16_t oldRnti, uint16_t newRnti, uint16_t mmWaveCellId, LteRrcSap::RadioResourceConfigDedicated rrcd);
 
     // CPHY SAP methods
     /**
@@ -486,7 +470,7 @@ class LteUeRrc : public Object
      * \param params LteUeCphySapUser::UeMeasurementsParameters
      */
     void DoReportUeMeasurements(LteUeCphySapUser::UeMeasurementsParameters params);
-
+    void DoNotifyRadioLinkFailure (double lastSinrValue);
     // RRC SAP methods
 
     /**
@@ -536,7 +520,10 @@ class LteUeRrc : public Object
      * \param msg the LteRrcSap::RrcConnectionReject
      */
     void DoRecvRrcConnectionReject(LteRrcSap::RrcConnectionReject msg);
-
+    /// Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectToMmWave interface.
+    void DoRecvRrcConnectToMmWave (uint16_t mmWaveCellId);
+    /// Part of the RRC protocol. Implement the LteUeRrcSapProvider:;RecvRrcConnectionSwitch interface.
+    void DoRecvRrcConnectionSwitch (LteRrcSap::RrcConnectionSwitch msg);
     /**
      * RRC CCM SAP USER Method
      * \param noOfComponentCarriers the number of component carriers
@@ -729,16 +716,7 @@ class LteUeRrc : public Object
         LteRrcSap::NonCriticalExtensionConfiguration nonCec);
     /// Start connection function
     void StartConnection();
-    /**
-     * \brief Leave connected mode method
-     * Resets the UE back to an appropriate state depending
-     * on the nature of cause. For example, the UE is move
-     * to the IDLE_START state upon radio link failure. At
-     * RRC, all radio bearers except SRB 0 are removed,
-     * measurement reports are cleared and the appropriate
-     * flags are reset to their default values. This method
-     * in turn triggers the reset methods of UE PHY and MAC layers.
-     */
+    /// Leave connected mode
     void LeaveConnectedMode();
     /// Dispose old SRB1
     void DisposeOldSrb1();
@@ -754,19 +732,40 @@ class LteUeRrc : public Object
      */
     void SwitchToState(State s);
 
+    /**
+     * Transfer the content of the buffers of RLC back into the PDCP, so
+     * that if a new RLC is available then the buffer content is not lost
+     * @params rlc the old RLC layer instance
+     * @params pdcp the PDCP instance connected to the new RLC instance
+     * @params lcid
+     */
+    void CopyRlcBuffers(Ptr<LteRlc> rlc, Ptr<LtePdcp> pdcp, uint16_t lcid);
+    //Lossless HO: merge 2 buffers into 1 with increment order.
+    std::vector < LteRlcAm::RetxPdu > MergeBuffers(std::vector < LteRlcAm::RetxPdu > first, std::vector < LteRlcAm::RetxPdu > second);
+
     std::map<uint8_t, uint8_t> m_bid2DrbidMap; ///< bid to DR bid map
 
     std::vector<LteUeCphySapUser*> m_cphySapUser;         ///< UE CPhy SAP user
     std::vector<LteUeCphySapProvider*> m_cphySapProvider; ///< UE CPhy SAP provider
+    // CphyProviders for InterRat handover between MmWave and LTE
+    std::vector<LteUeCphySapProvider*> m_lteCphySapProvider;
+    std::vector<LteUeCphySapProvider*> m_mmWaveCphySapProvider;
 
     std::vector<LteUeCmacSapUser*> m_cmacSapUser;         ///< UE CMac SAP user
     std::vector<LteUeCmacSapProvider*> m_cmacSapProvider; ///< UE CMac SAP provider
+    // CmacProviders for InterRat handover between MmWave and LTE
+    std::vector<LteUeCmacSapProvider*> m_lteCmacSapProvider;
+    std::vector<LteUeCmacSapProvider*> m_mmWaveCmacSapProvider;
 
+    //interfaces for RRC protocol
     LteUeRrcSapUser* m_rrcSapUser;         ///< RRC SAP user
     LteUeRrcSapProvider* m_rrcSapProvider; ///< RRC SAP provider
 
     LteMacSapProvider* m_macSapProvider; ///< MAC SAP provider
     LtePdcpSapUser* m_drbPdcpSapUser;    ///< DRB PDCP SAP user
+    // MacProviders for InterRat handover between MmWave and LTE
+    LteMacSapProvider* m_lteMacSapProvider;
+    LteMacSapProvider* m_mmWaveMacSapProvider;
 
     LteAsSapProvider* m_asSapProvider; ///< AS SAP provider
     LteAsSapUser* m_asSapUser;         ///< AS SAP user
@@ -786,6 +785,7 @@ class LteUeRrc : public Object
      * The `C-RNTI` attribute. Cell Radio Network Temporary Identifier.
      */
     uint16_t m_rnti;
+    uint16_t m_mmWaveRnti;
     /**
      * The `CellId` attribute. Serving cell identifier.
      */
@@ -809,7 +809,7 @@ class LteUeRrc : public Object
      * Radio Bearers by LCID.
      */
     std::map<uint8_t, Ptr<LteDataRadioBearerInfo>> m_drbMap;
-
+    std::map <uint8_t, Ptr<RlcBearerInfo> > m_rlcMap;
     /**
      * True if RLC SM is to be used, false if RLC UM/AM are to be used.
      * Can be modified using SetUseRlcSm().
@@ -820,8 +820,8 @@ class LteUeRrc : public Object
 
     LteRrcSap::PdschConfigDedicated m_pdschConfigDedicated; ///< the PDSCH config dedicated
 
-    uint16_t m_dlBandwidth; /**< Downlink bandwidth in RBs. */
-    uint16_t m_ulBandwidth; /**< Uplink bandwidth in RBs. */
+    uint8_t m_dlBandwidth; /**< Downlink bandwidth in RBs. */
+    uint8_t m_ulBandwidth; /**< Uplink bandwidth in RBs. */
 
     uint32_t m_dlEarfcn;                                     /**< Downlink carrier frequency. */
     uint32_t m_ulEarfcn;                                     /**< Uplink carrier frequency. */
@@ -879,7 +879,7 @@ class LteUeRrc : public Object
      * The `ConnectionTimeout` trace source. Fired upon timeout RRC connection
      * establishment because of T300. Exporting IMSI, cell ID, and RNTI.
      */
-    TracedCallback<uint64_t, uint16_t, uint16_t, uint8_t> m_connectionTimeoutTrace;
+    TracedCallback<uint64_t, uint16_t, uint16_t> m_connectionTimeoutTrace;
     /**
      * The `ConnectionReconfiguration` trace source. Fired upon RRC connection
      * reconfiguration. Exporting IMSI, cell ID, and RNTI.
@@ -907,28 +907,16 @@ class LteUeRrc : public Object
      */
     TracedCallback<Ptr<LteUeRrc>, std::list<LteRrcSap::SCellToAddMod>> m_sCarrierConfiguredTrace;
     /**
-     * The `Srb1Created` trace source. Fired when SRB1 is created, i.e.
-     * the RLC and PDCP entities are created for logical channel = 1.
-     * Exporting IMSI, cell ID, and RNTI
+     * The `SwitchToLte` trace source. Fired upon receiving a command to
+     * switch to LTE RAT. Exporting IMSI, cellId, RNTI.
      */
-    TracedCallback<uint64_t, uint16_t, uint16_t> m_srb1CreatedTrace;
+    TracedCallback<uint64_t, uint16_t, uint16_t> m_switchToLteTrace;
+
     /**
-     * The `DrbCreated` trace source. Fired when DRB is created, i.e.
-     * the RLC and PDCP entities are created for one logical channel.
-     * Exporting IMSI, cell ID, RNTI, LCID.
+     * The `SwitchToMmWave` trace source. Fired upon receiving a command to
+     * switch to MmWave RAT. Exporting IMSI, cellId, RNTI.
      */
-    TracedCallback<uint64_t, uint16_t, uint16_t, uint8_t> m_drbCreatedTrace;
-    /**
-     * The 'PhySyncDetection' trace source. Fired when UE RRC
-     * receives in-sync or out-of-sync indications from UE PHY
-     *
-     */
-    TracedCallback<uint64_t, uint16_t, uint16_t, std::string, uint8_t> m_phySyncDetectionTrace;
-    /**
-     * The 'RadioLinkFailure' trace source. Fired when T310 timer expires.
-     *
-     */
-    TracedCallback<uint64_t, uint16_t, uint16_t> m_radioLinkFailureTrace;
+    TracedCallback<uint64_t, uint16_t, uint16_t> m_switchToMmWaveTrace;
 
     /// True if a connection request by upper layers is pending.
     bool m_connectionPending;
@@ -1236,111 +1224,28 @@ class LteUeRrc : public Object
      *        connection establishment procedure has failed.
      */
     void ConnectionTimeout();
+    bool m_isSecondaryRRC;
+  uint16_t m_mmWaveCellId;
 
-    /**
-     * The 'T310' attribute. After detecting N310 out-of-sync indications,
-     * if number of in-sync indications detected is less than N311 before this
-     * time, then the radio link is considered to have failed and the UE
-     * transitions to state CONNECTED_PHY_PROMLEM and eventually IDLE_START
-     * and UE context at eNodeB is destroyed. RRC connection re-establishment
-     * is not initiated after this time. See 3GPP TS 36.331 7.3.
-     */
-    Time m_t310;
+  std::map<uint16_t, bool> m_isMmWaveCellMap;
+  bool m_interRatHoCapable;
+  LteRrcSap::RachConfigDedicated m_rachConfigDedicated;
+  bool m_ncRaStarted;
 
-    /**
-     * The 'N310' attribute. This specifies the maximum
-     * consecutive out-of-sync indications from lower layers.
-     */
-    uint8_t m_n310;
+  // lossless HO
+  std::vector < Ptr<Packet> > m_rlcBufferToBeForwarded;
+  uint32_t m_rlcBufferToBeForwardedSize;
 
-    /**
-     *  The 'N311' attribute. This specifies the minimum
-     *  consecutive in-sync indications from lower layers.
-     */
-    uint8_t m_n311;
+public:
+  /**
+   * The number of component carriers.
+   */
+  uint16_t m_numberOfComponentCarriers;
 
-    /**
-     * Time limit (given by m_t310) before the radio link is considered to have failed.
-     * It is set upon detecting physical layer problems i.e. upon receiving
-     * N310 consecutive out-of-sync indications from lower layers. Calling
-     * LteUeRrc::RadioLinkFailureDetected() when it expires.
-     * It is cancelled upon receiving N311 consecutive in-sync indications. Upon
-     * expiry, the UE transitions to RRC_IDLE and no RRC connection
-     * re-establishment is initiated.
-     */
-    EventId m_radioLinkFailureDetected;
-
-    uint8_t m_noOfSyncIndications; ///< number of in-sync or out-of-sync indications coming from PHY
-                                   ///< layer
-
-    bool m_leaveConnectedMode; ///< true if UE NAS ask UE RRC to leave connected mode, e.g., after
-                               ///< RLF, i.e. T310 has expired
-
-    uint16_t m_previousCellId; ///< the cell id of the previous cell UE was attached to
-
-    uint8_t m_connEstFailCountLimit; ///< the counter value for T300 timer expiration received from
-                                     ///< the eNB
-
-    uint8_t m_connEstFailCount; ///< the counter to count T300 timer expiration
-    /**
-     * \brief Radio link failure detected function
-     *
-     * Upon detection of radio link failure, the UE is reverted
-     * back to idle state and the UE context at eNodeB and EPC
-     * is deleted, thus releasing the RRC connection. The eNodeB is notified
-     * in an ideal way since there is no radio link failure detection
-     * implemented at the eNodeB. If the deletion process is not synchronous,
-     * then errors occur due to triggering of assert messages.
-     */
-    void RadioLinkFailureDetected();
-
-    /**
-     * \brief Do notify in sync function
-     *
-     * Triggered upon receiving an in sync indication from UE PHY.
-     * When the count equals N311, then T310 is cancelled.
-     */
-    void DoNotifyInSync();
-
-    /**
-     * \brief Do notify out of sync function
-     *
-     * Triggered upon receiving an out of sync indication from UE PHY.
-     * When the count equals N310, then T310 is started.
-     */
-    void DoNotifyOutOfSync();
-
-    /**
-     * \brief Do reset sync indication counter function
-     *
-     * Reset the sync indication counter
-     * if the Qin or Qout condition at PHY
-     * is not fulfilled for the number of
-     * consecutive frames.
-     */
-    void DoResetSyncIndicationCounter();
-
-    /**
-     * \brief Reset radio link failure parameters
-     *
-     * RLF timers and counters should be rest upon:
-     *
-     * - If the UE received N311 in Sync indications from the UE
-     *   PHY.
-     * - If the UE receives RRCConnectionReconfiguration including
-     *   the mobilityControlInfo (TS 36.331 sec 5.3.5.4)
-     *
-     * Inside this method the UE RRC also instructs the UE PHY to reset the
-     * RLF parameters so, it can start RLF detection again.
-     *
-     */
-    void ResetRlfParams();
-
-  public:
-    /**
-     * The number of component carriers.
-     */
-    uint16_t m_numberOfComponentCarriers;
+  /**
+   * The number of mmWave component carriers. This is used in McUeDevs.
+   */
+  uint16_t m_numberOfMmWaveComponentCarriers;
 
 }; // end of class LteUeRrc
 

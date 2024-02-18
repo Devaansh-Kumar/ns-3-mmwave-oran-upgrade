@@ -101,7 +101,9 @@ class EpcS1uDlTestCase : public TestCase
 
   private:
     void DoRun() override;
+    void InitialMsg (Ptr<EpcEnbApplication> epcApp, uint64_t imsi);
     std::vector<EnbDlTestData> m_enbDlTestData; ///< ENB DL test data
+    std::vector<Ptr<EpcTestRrc>> rrcVector;
 };
 
 EpcS1uDlTestCase::EpcS1uDlTestCase(std::string name, std::vector<EnbDlTestData> v)
@@ -115,10 +117,19 @@ EpcS1uDlTestCase::~EpcS1uDlTestCase()
 }
 
 void
+EpcS1uDlTestCase::InitialMsg (Ptr<EpcEnbApplication> enbApp, uint64_t imsi)
+{
+
+  enbApp->GetS1SapProvider ()->InitialUeMessage (imsi, (uint16_t) imsi);
+}
+
+void
 EpcS1uDlTestCase::DoRun()
 {
+    uint64_t imsi = 0
     Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
     Ptr<Node> pgw = epcHelper->GetPgwNode();
+    epcHelper->SetAttribute("S1apLinkDelay", TimeValue(Seconds(0)));
 
     // allow jumbo packets
     Config::SetDefault("ns3::CsmaNetDevice::Mtu", UintegerValue(30000));
@@ -179,15 +190,13 @@ EpcS1uDlTestCase::DoRun()
         Ptr<NetDevice> enbDevice = cellDevices.Get(cellDevices.GetN() - 1);
 
         // Note that the EpcEnbApplication won't care of the actual NetDevice type
-        std::vector<uint16_t> cellIds;
-        cellIds.push_back(cellId);
-        epcHelper->AddEnb(enb, enbDevice, cellIds);
+        epcHelper->AddEnb (enb, enbDevice, cellId);
 
         // Plug test RRC entity
         Ptr<EpcEnbApplication> enbApp = enb->GetApplication(0)->GetObject<EpcEnbApplication>();
         NS_ASSERT_MSG(enbApp, "cannot retrieve EpcEnbApplication");
         Ptr<EpcTestRrc> rrc = CreateObject<EpcTestRrc>();
-        enb->AggregateObject(rrc);
+        rrcVector.push_back(rrc);
         rrc->SetS1SapProvider(enbApp->GetS1SapProvider());
         enbApp->SetS1SapUser(rrc->GetS1SapUser());
 
@@ -227,17 +236,11 @@ EpcS1uDlTestCase::DoRun()
             apps.Stop(Seconds(10.0));
             enbit->ues[u].clientApp = apps.Get(0);
 
-            uint64_t imsi = ++imsiCounter;
-            epcHelper->AddUe(ueLteDevice, imsi);
-            epcHelper->ActivateEpsBearer(ueLteDevice,
-                                         imsi,
-                                         EpcTft::Default(),
-                                         EpsBearer(EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
-            Simulator::Schedule(MilliSeconds(10),
-                                &EpcEnbS1SapProvider::InitialUeMessage,
-                                enbApp->GetS1SapProvider(),
-                                imsi,
-                                (uint16_t)imsi);
+            epcHelper->AddUe (ueLteDevice, ++imsi);
+            epcHelper->ActivateEpsBearer (ueLteDevice, imsi, EpcTft::Default (), EpsBearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+
+            Simulator::Schedule (Seconds(0.01), &EpcS1uDlTestCase::InitialMsg, this, enbApp, imsi);
+
         }
     }
 

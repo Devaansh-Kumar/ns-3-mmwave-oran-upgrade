@@ -91,6 +91,14 @@ struct LteSpectrumSignalParametersDlCtrlFrame;
 struct LteSpectrumSignalParametersUlSrsFrame;
 
 /**
+* this method is invoked by the LteSpectrumPhy to notify the PHY that the
+* transmission of a given packet has been completed.
+*
+* @param packet the Packet whose TX has been completed.
+*/
+typedef Callback< void, Ptr<const Packet> > LtePhyTxEndCallback;
+
+/**
  * This method is used by the LteSpectrumPhy to notify the PHY that a
  * previously started RX attempt has terminated without success
  */
@@ -267,6 +275,14 @@ class LteSpectrumPhy : public SpectrumPhy
     bool StartTxUlSrsFrame();
 
     /**
+     * set the callback for the end of a TX, as part of the
+     * interconnections between the PHY and the MAC
+     *
+     * @param c the callback
+     */
+    void SetLtePhyTxEndCallback (LtePhyTxEndCallback c);
+
+    /**
      * set the callback for the end of a RX in error, as part of the
      * interconnections between the PHY and the MAC
      *
@@ -409,18 +425,6 @@ class LteSpectrumPhy : public SpectrumPhy
                        uint8_t harqId,
                        uint8_t rv,
                        bool downlink);
-    /**
-     * \brief Remove expected transport block.
-     *
-     * When UE context at eNodeB is removed and if UL TB is expected to be received
-     * but not transmitted due to break in radio link. The TB with different rnti or lcid
-     * remains during the transmission of a new TB and causes problems with
-     * m_ulPhyReception trace, since the UE context was already removed. TB has to be
-     * removed when ue context at eNodeB is removed
-     *
-     * \param rnti The RNTI of the UE
-     */
-    void RemoveExpectedTb(uint16_t rnti);
 
     /**
      *

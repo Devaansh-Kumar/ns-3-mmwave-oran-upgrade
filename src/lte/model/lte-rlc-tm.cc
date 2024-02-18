@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011,2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,10 +17,13 @@
  *
  * Author: Manuel Requena <manuel.requena@cttc.es>
  *         Nicola Baldo <nbaldo@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #include "lte-rlc-tm.h"
-
+#include "ns3/lte-rlc-tag.h"
 #include "ns3/log.h"
 #include "ns3/simulator.h"
 
@@ -76,10 +80,17 @@ LteRlcTm::DoTransmitPdcpPdu(Ptr<Packet> p)
 {
     NS_LOG_FUNCTION(this << m_rnti << (uint32_t)m_lcid << p->GetSize());
 
+    ++m_txPacketsInReportingPeriod;
+    m_txBytesInReportingPeriod += p->GetSize();
+
     if (m_txBufferSize + p->GetSize() <= m_maxTxBufferSize)
     {
+        /** Store arrival time */
+        RlcTag timeTag (Simulator::Now ());
+        p->AddPacketTag (timeTag);
+
         NS_LOG_LOGIC("Tx Buffer: New packet added");
-        m_txBuffer.emplace_back(p, Simulator::Now());
+        m_txBuffer.push_back (p);
         m_txBufferSize += p->GetSize();
         NS_LOG_LOGIC("NumOfBuffers = " << m_txBuffer.size());
         NS_LOG_LOGIC("txBufferSize = " << m_txBufferSize);
@@ -96,6 +107,13 @@ LteRlcTm::DoTransmitPdcpPdu(Ptr<Packet> p)
     /** Report Buffer Status */
     DoReportBufferStatus();
     m_rbsTimer.Cancel();
+}
+
+void
+LteRlcTm::DoSendMcPdcpSdu(EpcX2Sap::UeDataParams params)
+{
+  NS_LOG_FUNCTION(this);
+  DoTransmitPdcpPdu(params.ueData);
 }
 
 /**
@@ -119,7 +137,7 @@ LteRlcTm::DoNotifyTxOpportunity(LteMacSapUser::TxOpportunityParameters txOpParam
         return;
     }
 
-    Ptr<Packet> packet = m_txBuffer.begin()->m_pdu->Copy();
+    Ptr<Packet> packet = (*(m_txBuffer.begin ()))->Copy ();
 
     if (txOpParams.bytes < packet->GetSize())
     {
@@ -128,9 +146,12 @@ LteRlcTm::DoNotifyTxOpportunity(LteMacSapUser::TxOpportunityParameters txOpParam
         return;
     }
 
-    m_txBufferSize -= packet->GetSize();
+    m_txBufferSize -= (*(m_txBuffer.begin()))->GetSize ();
     m_txBuffer.erase(m_txBuffer.begin());
 
+    // Sender timestamp
+    RlcTag rlcTag (Simulator::Now ());
+    packet->AddByteTag (rlcTag);
     m_txPdu(m_rnti, m_lcid, packet->GetSize());
 
     // Send RLC PDU to MAC layer
@@ -162,7 +183,14 @@ LteRlcTm::DoReceivePdu(LteMacSapUser::ReceivePduParameters rxPduParams)
 {
     NS_LOG_FUNCTION(this << m_rnti << (uint32_t)m_lcid << rxPduParams.p->GetSize());
 
-    m_rxPdu(m_rnti, m_lcid, rxPduParams.p->GetSize(), 0);
+    // Receiver timestamp
+    RlcTag rlcTag;
+    Time delay;
+    if (rxPduParams.p->FindFirstMatchingByteTag (rlcTag))
+        {
+        delay = Simulator::Now() - rlcTag.GetSenderTimestamp ();
+        }
+    m_rxPdu (m_rnti, m_lcid, rxPduParams.p->GetSize (), delay.GetNanoSeconds ());
 
     // 5.1.1.2 Receive operations
     // 5.1.1.2.1  General
@@ -180,7 +208,9 @@ LteRlcTm::DoReportBufferStatus()
 
     if (!m_txBuffer.empty())
     {
-        holDelay = Simulator::Now() - m_txBuffer.front().m_waitingSince;
+        RlcTag holTimeTag;
+        m_txBuffer.front ()->PeekPacketTag (holTimeTag);
+        holDelay = Simulator::Now () - holTimeTag.GetSenderTimestamp ();
 
         queueSize = m_txBufferSize; // just data in tx queue (no header overhead for RLC TM)
     }
@@ -193,6 +223,20 @@ LteRlcTm::DoReportBufferStatus()
     r.retxQueueSize = 0;
     r.retxQueueHolDelay = 0;
     r.statusPduSize = 0;
+
+    // from UM low lat
+    for (unsigned i = 0; i < m_txBuffer.size(); i++)
+    {
+        if (i == 20)  // only include up to the first 20 packets
+        {
+        break;
+        }
+        r.txPacketSizes.push_back (m_txBuffer[i]->GetSize ());
+        RlcTag holTimeTag;
+        m_txBuffer[i]->PeekPacketTag (holTimeTag);
+        holDelay = Simulator::Now () - holTimeTag.GetSenderTimestamp ();
+        r.txPacketDelays.push_back (holDelay.GetMicroSeconds ());
+    }
 
     NS_LOG_LOGIC("Send ReportBufferStatus = " << r.txQueueSize << ", " << r.txQueueHolDelay);
     m_macSapProvider->ReportBufferStatus(r);

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #ifndef LTE_RRC_PROTOCOL_IDEAL_H
@@ -129,16 +133,7 @@ class LteUeRrcProtocolIdeal : public Object
      */
     void DoSendMeasurementReport(LteRrcSap::MeasurementReport msg);
 
-    /**
-     * \brief Send Ideal UE context remove request function
-     *
-     * Notify eNodeB to release UE context once radio link failure
-     * or random access failure is detected. It is needed since no
-     * RLF detection mechanism at eNodeB is implemented
-     *
-     * \param rnti the RNTI of the UE
-     */
-    void DoSendIdealUeContextRemoveRequest(uint16_t rnti);
+    void DoSendNotifySecondaryCellConnected (uint16_t mmWaveRnti, uint16_t mmWaveCellId);
 
     /// Set ENB RRC SAP provider
     void SetEnbRrcSapProvider();
@@ -282,6 +277,8 @@ class LteEnbRrcProtocolIdeal : public Object
      * \param msg LteRrcSap::RrcConnectionReject
      */
     void DoSendRrcConnectionReject(uint16_t rnti, LteRrcSap::RrcConnectionReject msg);
+    void DoSendRrcConnectionSwitch (uint16_t rnti, LteRrcSap::RrcConnectionSwitch msg);
+    void DoSendRrcConnectToMmWave (uint16_t rnti, uint16_t mmWaveCellId);
     /**
      * Encode handover preparation information function
      *

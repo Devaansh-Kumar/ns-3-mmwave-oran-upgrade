@@ -85,7 +85,7 @@ class SimpleUeComponentCarrierManager : public LteUeComponentCarrierManager
      * \brief Report buffer status function
      * \param params LteMacSapProvider::ReportBufferStatusParameters
      */
-    virtual void DoReportBufferStatus(LteMacSapProvider::ReportBufferStatusParameters params);
+    void DoReportBufferStatus(LteMacSapProvider::ReportBufferStatusParameters params);
     /// Notify HARQ deliver failure
     void DoNotifyHarqDeliveryFailure();
     // forwarded from LteMacSapUser
@@ -109,7 +109,7 @@ class SimpleUeComponentCarrierManager : public LteUeComponentCarrierManager
      * \param msu the MSU
      * \returns updated LC config list
      */
-    virtual std::vector<LteUeCcmRrcSapProvider::LcsConfig> DoAddLc(
+    std::vector<LteUeCcmRrcSapProvider::LcsConfig> DoAddLc(
         uint8_t lcId,
         LteUeCmacSapProvider::LogicalChannelConfig lcConfig,
         LteMacSapUser* msu);
@@ -126,7 +126,7 @@ class SimpleUeComponentCarrierManager : public LteUeComponentCarrierManager
      * \param msu the MSU
      * \returns LteMacSapUser *
      */
-    virtual LteMacSapUser* DoConfigureSignalBearer(
+    LteMacSapUser* DoConfigureSignalBearer(
         uint8_t lcId,
         LteUeCmacSapProvider::LogicalChannelConfig lcConfig,
         LteMacSapUser* msu);
@@ -136,7 +136,7 @@ class SimpleUeComponentCarrierManager : public LteUeComponentCarrierManager
      */
     void DoReset();
 
-  protected:
+  private:
     LteMacSapUser* m_ccmMacSapUser;         //!< Interface to the UE RLC instance.
     LteMacSapProvider* m_ccmMacSapProvider; //!< Receive API calls from the UE RLC instance
 
