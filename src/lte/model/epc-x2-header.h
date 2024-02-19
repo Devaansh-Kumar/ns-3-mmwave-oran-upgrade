@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Manuel Requena <manuel.requena@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #ifndef EPC_X2_HEADER_H
@@ -87,7 +91,16 @@ class EpcX2Header : public Header
         LoadIndication = 2,
         SnStatusTransfer = 4,
         UeContextRelease = 5,
-        ResourceStatusReporting = 10
+        ResourceStatusReporting = 10,
+        RlcSetupRequest         = 11, // added for MC functionalities
+        RlcSetupCompleted       = 12,
+        NotifyMcConnection      = 13,
+        UpdateUeSinr            = 14,
+        RequestMcHandover       = 15,
+        NotifyMmWaveLteHandover = 16,
+        NotifyCoordinatorHandoverFailed = 17,
+        SwitchConnection        = 18,
+        SecondaryCellHandoverCompleted = 19
     };
 
     /// Type of message enumeration
@@ -95,7 +108,9 @@ class EpcX2Header : public Header
     {
         InitiatingMessage = 0,
         SuccessfulOutcome = 1,
-        UnsuccessfulOutcome = 2
+        UnsuccessfulOutcome     = 2,
+        McForwardDownlinkData   = 3, // added for MC functionalities
+        McForwardUplinkData     = 4
     };
 
   private:
@@ -148,6 +163,9 @@ class EpcX2HandoverRequestHeader : public Header
      */
     void SetCause(uint16_t cause);
 
+    bool GetIsMc () const;
+    void SetIsMc (bool isMc);
+
     /**
      * Get target cell id function
      * \returns the target cell ID
@@ -181,6 +199,8 @@ class EpcX2HandoverRequestHeader : public Header
      */
     void SetBearers(std::vector<EpcX2Sap::ErabToBeSetupItem> bearers);
 
+    std::vector <EpcX2Sap::RlcSetupRequest> GetRlcSetupRequests () const;
+    void SetRlcSetupRequests (std::vector <EpcX2Sap::RlcSetupRequest> rlcRequests);
     /**
      * Get UE Aggregate Max Bit Rate Downlink function
      * \returns the UE aggregate max bit rate downlink
@@ -225,6 +245,202 @@ class EpcX2HandoverRequestHeader : public Header
     uint64_t m_ueAggregateMaxBitRateDownlink; ///< aggregate max bit rate downlink
     uint64_t m_ueAggregateMaxBitRateUplink;   ///< aggregate max bit rate uplink
     std::vector<EpcX2Sap::ErabToBeSetupItem> m_erabsToBeSetupList; ///< ERAB to be setup list
+    std::vector <EpcX2Sap::RlcSetupRequest> m_rlcRequestsList;
+    bool m_isMc;
+};
+
+class EpcX2RlcSetupRequestHeader : public Header
+{
+public:
+  EpcX2RlcSetupRequestHeader ();
+  virtual ~EpcX2RlcSetupRequestHeader ();
+
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual void Print (std::ostream &os) const;
+
+  uint16_t GetSourceCellId () const;
+  void SetSourceCellId (uint16_t sourceCellId);
+
+  uint16_t GetTargetCellId () const;
+  void SetTargetCellId (uint16_t targetCellId);
+
+  uint32_t GetGtpTeid () const;
+  void SetGtpTeid (uint32_t gtpTeid);
+
+  uint16_t GetMmWaveRnti () const;
+  void SetMmWaveRnti (uint16_t rnti);
+
+  uint16_t GetLteRnti () const;
+  void SetLteRnti (uint16_t rnti);
+
+  uint8_t GetDrbid () const;
+  void SetDrbid (uint8_t drbid);
+
+  LteEnbCmacSapProvider::LcInfo GetLcInfo() const;
+  void SetLcInfo(LteEnbCmacSapProvider::LcInfo lcInfo);
+
+  LteRrcSap::RlcConfig GetRlcConfig() const;
+  void SetRlcConfig(LteRrcSap::RlcConfig rlcConfig);
+
+  LteRrcSap::LogicalChannelConfig GetLogicalChannelConfig();
+  void SetLogicalChannelConfig(LteRrcSap::LogicalChannelConfig conf);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
+
+private:
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  uint16_t          m_sourceCellId;
+  uint16_t          m_targetCellId;
+  uint32_t          m_gtpTeid;
+  uint16_t          m_mmWaveRnti;
+  uint16_t          m_lteRnti;
+  uint8_t           m_drbid;
+  LteEnbCmacSapProvider::LcInfo m_lcInfo;
+  LteRrcSap::RlcConfig m_rlcConfig;
+  LteRrcSap::LogicalChannelConfig m_lcConfig;
+};
+
+class EpcX2RlcSetupCompletedHeader : public Header
+{
+public:
+  EpcX2RlcSetupCompletedHeader ();
+  virtual ~EpcX2RlcSetupCompletedHeader ();
+
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual void Print (std::ostream &os) const;
+
+  uint16_t GetSourceCellId () const;
+  void SetSourceCellId (uint16_t sourceCellId);
+
+  uint16_t GetTargetCellId () const;
+  void SetTargetCellId (uint16_t targetCellId);
+
+  uint32_t GetGtpTeid () const;
+  void SetGtpTeid (uint32_t gtpTeid);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
+
+private:
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  uint16_t          m_sourceCellId;
+  uint16_t          m_targetCellId;
+  uint32_t          m_gtpTeid;
+};
+
+class EpcX2McHandoverHeader : public Header
+{
+public:
+  EpcX2McHandoverHeader ();
+  virtual ~EpcX2McHandoverHeader ();
+
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual void Print (std::ostream &os) const;
+
+  uint16_t GetTargetCellId () const;
+  void SetTargetCellId (uint16_t targetCellId);
+
+  uint16_t GetOldCellId () const;
+  void SetOldCellId (uint16_t oldCellId);
+
+  uint64_t GetImsi () const;
+  void SetImsi (uint64_t imsi);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
+
+private:
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  uint16_t          m_targetCellId;
+  uint16_t          m_oldCellId;
+  uint64_t          m_imsi;
+};
+
+class EpcX2SecondaryCellHandoverCompletedHeader : public Header
+{
+public:
+  EpcX2SecondaryCellHandoverCompletedHeader ();
+  virtual ~EpcX2SecondaryCellHandoverCompletedHeader ();
+
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual void Print (std::ostream &os) const;
+
+  uint16_t GetMmWaveRnti () const;
+  void SetMmWaveRnti (uint16_t mmWaveRnti);
+
+  uint16_t GetOldEnbUeX2apId () const;
+  void SetOldEnbUeX2apId (uint16_t oldEnbUeX2apId);
+
+  uint64_t GetImsi () const;
+  void SetImsi (uint64_t imsi);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
+
+private:
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  uint16_t          m_mmWaveRnti;
+  uint16_t          m_oldEnbUeX2apId;
+  uint64_t          m_imsi;
+};
+
+class EpcX2NotifyCoordinatorHandoverFailedHeader : public Header
+{
+public:
+  EpcX2NotifyCoordinatorHandoverFailedHeader ();
+  virtual ~EpcX2NotifyCoordinatorHandoverFailedHeader ();
+
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual void Print (std::ostream &os) const;
+
+  uint16_t GetTargetCellId () const;
+  void SetTargetCellId (uint16_t targetCellId);
+
+  uint16_t GetSourceCellId () const;
+  void SetSourceCellId (uint16_t oldCellId);
+
+  uint64_t GetImsi () const;
+  void SetImsi (uint64_t imsi);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
+
+private:
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  uint16_t          m_targetCellId;
+  uint16_t          m_sourceCellId;
+  uint64_t          m_imsi;
 };
 
 /**
@@ -717,6 +933,77 @@ class EpcX2HandoverCancelHeader : public Header
     uint16_t m_oldEnbUeX2apId; ///< old ENB UE X2 AP ID
     uint16_t m_newEnbUeX2apId; ///< new ENB UE X2 AP ID
     uint16_t m_cause;          ///< cause
+};
+
+class EpcX2UeImsiSinrUpdateHeader : public Header
+{
+public:
+  EpcX2UeImsiSinrUpdateHeader ();
+  virtual ~EpcX2UeImsiSinrUpdateHeader ();
+
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual void Print (std::ostream &os) const;
+
+
+  std::map <uint64_t, double> GetUeImsiSinrMap () const;
+  void SetUeImsiSinrMap (std::map<uint64_t, double> map);
+
+  uint16_t GetSourceCellId () const;
+  void SetSourceCellId (uint16_t sourceCellId);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
+
+private:
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  // from http://beej.us/guide/bgnet/examples/ieee754.c, to convert
+  // uint64_t to double and viceversa according to IEEE754 format
+  static uint64_t pack754(long double f);
+  static long double unpack754(uint64_t i);
+
+  std::map <uint64_t, double> m_map;
+  uint16_t m_sourceCellId;
+};
+
+class EpcX2ConnectionSwitchHeader : public Header
+{
+public:
+  EpcX2ConnectionSwitchHeader ();
+  virtual ~EpcX2ConnectionSwitchHeader ();
+
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
+  virtual void Print (std::ostream &os) const;
+
+
+  uint16_t GetMmWaveRnti () const;
+  void SetMmWaveRnti (uint16_t rnti);
+
+  bool GetUseMmWaveConnection () const;
+  void SetUseMmWaveConnection (bool useMmWaveConnection);
+
+  uint8_t GetDrbid () const;
+  void SetDrbid (uint8_t bid);
+
+  uint32_t GetLengthOfIes () const;
+  uint32_t GetNumberOfIes () const;
+
+private:
+  uint32_t          m_numberOfIes;
+  uint32_t          m_headerLength;
+
+  uint16_t m_mmWaveRnti;
+  uint8_t m_drbid;
+  bool     m_useMmWaveConnection;
 };
 
 } // namespace ns3
