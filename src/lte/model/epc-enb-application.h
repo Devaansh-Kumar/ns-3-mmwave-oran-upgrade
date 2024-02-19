@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -14,9 +15,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Authors:
- *   Jaume Nin <jnin@cttc.cat>
- *   Nicola Baldo <nbaldo@cttc.cat>
+ * Author: Jaume Nin <jnin@cttc.cat>
+ *         Nicola Baldo <nbaldo@cttc.cat>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *           Support for real S1AP link
  */
 
 #ifndef EPC_ENB_APPLICATION_H
@@ -33,9 +36,9 @@
 #include <ns3/socket.h>
 #include <ns3/traced-callback.h>
 #include <ns3/virtual-net-device.h>
-
+#include <ns3/lte-common.h>
 #include <map>
-
+#include <ns3/eps-bearer.h>
 namespace ns3
 {
 class EpcEnbS1SapUser;
@@ -314,6 +317,8 @@ class EpcEnbApplication : public Application
      * MME side of the S1-AP SAP
      *
      */
+
+
     EpcS1apSapMme* m_s1apSapMme;
 
     /**
