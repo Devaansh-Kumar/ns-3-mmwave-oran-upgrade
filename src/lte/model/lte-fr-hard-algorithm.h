@@ -78,7 +78,7 @@ class LteFrHardAlgorithm : public LteFfrAlgorithm
         const FfMacSchedSapProvider::SchedUlCqiInfoReqParameters& params) override;
     void DoReportUlCqiInfo(std::map<uint16_t, std::vector<double>> ulCqiMap) override;
     uint8_t DoGetTpc(uint16_t rnti) override;
-    uint16_t DoGetMinContinuousUlBandwidth() override;
+    uint8_t DoGetMinContinuousUlBandwidth() override;
 
     // FFR SAP RRC PROVIDER IMPLEMENTATION
     void DoReportUeMeas(uint16_t rnti, LteRrcSap::MeasResults measResults) override;

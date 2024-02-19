@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2009, 2011 CTTC
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +18,9 @@
  * Author: Nicola Baldo <nbaldo@cttc.es>
  *         Giuseppe Piro  <g.piro@poliba.it>
  *         Marco Miozzo <marco.miozzo@cttc.es> (add physical error model)
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #include "lte-spectrum-phy.h"
@@ -312,7 +316,7 @@ LteSpectrumPhy::Reset()
     m_txControlMessageList.clear();
     m_rxPacketBurstList.clear();
     m_txPacketBurst = nullptr;
-    m_rxSpectrumModel = nullptr;
+    // m_rxSpectrumModel = nullptr;
 
     // Detach from the channel, because receiving any signal without
     // spectrum model is an error.
@@ -682,8 +686,8 @@ LteSpectrumPhy::StartRxData(Ptr<LteSpectrumSignalParametersDataFrame> params)
                     // start RX
                     m_firstRxStart = Simulator::Now();
                     m_firstRxDuration = params->duration;
-                    NS_LOG_LOGIC(this << " scheduling EndRx with delay "
-                                      << params->duration.As(Time::S));
+                    NS_LOG_LOGIC (this << " scheduling EndRx with delay " << 
+                                        params->duration.GetSeconds () << "s");
                     m_endRxDataEvent =
                         Simulator::Schedule(params->duration, &LteSpectrumPhy::EndRxData, this);
                 }
@@ -920,24 +924,6 @@ LteSpectrumPhy::AddExpectedTb(uint16_t rnti,
     // insert new entry
     tbInfo_t tbInfo = {ndi, size, mcs, map, harqId, rv, 0.0, downlink, false, false};
     m_expectedTbs.insert(std::pair<TbId_t, tbInfo_t>(tbId, tbInfo));
-}
-
-void
-LteSpectrumPhy::RemoveExpectedTb(uint16_t rnti)
-{
-    NS_LOG_FUNCTION(this << rnti);
-    TbId_t tbId;
-    tbId.m_rnti = rnti;
-    // Remove TB of both the layers
-    for (uint8_t i = 0; i < 2; i++)
-    {
-        tbId.m_layer = i;
-        auto it = m_expectedTbs.find(tbId);
-        if (it != m_expectedTbs.end())
-        {
-            m_expectedTbs.erase(it);
-        }
-    }
 }
 
 void

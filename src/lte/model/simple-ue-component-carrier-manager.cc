@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015 Danilo Abrignani
+ * Copyright (c) 2016, 2018, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
  *
  * Author: Danilo Abrignani <danilo.abrignani@unibo.it>
  *
+ * Modified by: Tommaso Zugno <tommasozugno@gmail.com>
+ *                 Integration of Carrier Aggregation for the mmWave module
  */
 
 #include "simple-ue-component-carrier-manager.h"
@@ -196,20 +199,19 @@ SimpleUeComponentCarrierManager::DoReportBufferStatus(
 {
     NS_LOG_FUNCTION(this);
     NS_LOG_DEBUG("BSR from RLC for LCID = " << (uint16_t)params.lcid);
-    auto it = m_macSapProvidersMap.find(0);
-    NS_ABORT_MSG_IF(it == m_macSapProvidersMap.end(), "could not find Sap for ComponentCarrier");
-
-    NS_LOG_DEBUG("Size of component carrier LC map " << m_componentCarrierLcMap.size());
-
-    for (auto ccLcMapIt = m_componentCarrierLcMap.begin();
-         ccLcMapIt != m_componentCarrierLcMap.end();
-         ccLcMapIt++)
+    for(std::map <uint8_t, LteMacSapProvider*>::iterator it = m_macSapProvidersMap.begin(); it != m_macSapProvidersMap.end(); it++)
     {
-        NS_LOG_DEBUG("BSR from RLC for CC id = " << (uint16_t)ccLcMapIt->first);
-        auto it = ccLcMapIt->second.find(params.lcid);
-        if (it != ccLcMapIt->second.end())
+        if (it->first == 0)
         {
-            it->second->ReportBufferStatus(params);
+        // report the BSR to the primary CC
+        it->second->ReportBufferStatus (params);
+        }
+        else
+        {
+        // report the BSR to other CCs. Only the PCC sends status PDUs.
+        LteMacSapProvider::ReportBufferStatusParameters newParams = params;
+        newParams.statusPduSize = 0;
+        it->second->ReportBufferStatus (newParams);
         }
     }
 }

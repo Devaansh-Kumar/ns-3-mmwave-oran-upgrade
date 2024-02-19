@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2010 TELEMATICS LAB, DEE - Politecnico di Bari
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,9 @@
  *
  * Author: Giuseppe Piro  <g.piro@poliba.it>
  *         Marco Miozzo <mmiozzo@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #include "lte-phy.h"
@@ -51,8 +55,6 @@ LtePhy::LtePhy(Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy)
       m_ulBandwidth(0),
       m_dlBandwidth(0),
       m_rbgSize(0),
-      m_dlEarfcn(0),
-      m_ulEarfcn(0),
       m_macChTtiDelay(0),
       m_cellId(0),
       m_componentCarrierId(0)
@@ -87,13 +89,13 @@ LtePhy::DoDispose()
 }
 
 void
-LtePhy::SetDevice(Ptr<LteNetDevice> d)
+LtePhy::SetDevice(Ptr<NetDevice> d)
 {
     NS_LOG_FUNCTION(this << d);
     m_netDevice = d;
 }
 
-Ptr<LteNetDevice>
+Ptr<NetDevice>
 LtePhy::GetDevice() const
 {
     NS_LOG_FUNCTION(this);

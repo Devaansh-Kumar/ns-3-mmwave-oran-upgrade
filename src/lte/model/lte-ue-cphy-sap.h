@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011, 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,9 @@
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>,
  *         Marco Miozzo <mmiozzo@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #ifndef LTE_UE_CPHY_SAP_H
@@ -116,7 +120,7 @@ class LteUeCphySapProvider
     /**
      * \param dlBandwidth the DL bandwidth in number of PRBs
      */
-    virtual void SetDlBandwidth(uint16_t dlBandwidth) = 0;
+    virtual void SetDlBandwidth(uint8_t dlBandwidth) = 0;
 
     /**
      * \brief Configure uplink (normally done after reception of SIB2)
@@ -124,7 +128,7 @@ class LteUeCphySapProvider
      * \param ulEarfcn the uplink carrier frequency (EARFCN)
      * \param ulBandwidth the UL bandwidth in number of PRBs
      */
-    virtual void ConfigureUplink(uint32_t ulEarfcn, uint16_t ulBandwidth) = 0;
+    virtual void ConfigureUplink(uint32_t ulEarfcn, uint8_t ulBandwidth) = 0;
 
     /**
      * \brief Configure referenceSignalPower
@@ -134,29 +138,21 @@ class LteUeCphySapProvider
     virtual void ConfigureReferenceSignalPower(int8_t referenceSignalPower) = 0;
 
     /**
-     * \brief Set Rnti function
-     *
      * \param rnti the cell-specific UE identifier
      */
     virtual void SetRnti(uint16_t rnti) = 0;
 
     /**
-     * \brief Set transmission mode
-     *
      * \param txMode the transmissionMode of the user
      */
     virtual void SetTransmissionMode(uint8_t txMode) = 0;
 
     /**
-     * \brief Set SRS configuration index
-     *
      * \param srcCi the SRS configuration index
      */
     virtual void SetSrsConfigurationIndex(uint16_t srcCi) = 0;
 
     /**
-     * \brief Set P_A value for UE power control
-     *
      * \param pa the P_A value
      */
     virtual void SetPa(double pa) = 0;
@@ -171,37 +167,6 @@ class LteUeCphySapProvider
      * \param rsrpFilterCoefficient value.
      */
     virtual void SetRsrpFilterCoefficient(uint8_t rsrpFilterCoefficient) = 0;
-
-    /**
-     * \brief Reset the PHY after radio link failure function
-     * It resets the physical layer parameters of the
-     * UE after RLF.
-     */
-    virtual void ResetPhyAfterRlf() = 0;
-
-    /**
-     * \brief Reset radio link failure parameters
-     *
-     * Upon receiving N311 in-sync indications from the UE
-     * PHY the UE RRC instructs the UE PHY to reset the
-     * RLF parameters so, it can start RLF detection again.
-     */
-    virtual void ResetRlfParams() = 0;
-
-    /**
-     * \brief Start in-sync detection function
-     * When T310 timer is started, it indicates that physical layer
-     * problems are detected at the UE and the recovery process is
-     * started by checking if the radio frames are in-sync for N311
-     * consecutive times.
-     */
-    virtual void StartInSyncDetection() = 0;
-
-    /**
-     * \brief A method call by UE RRC to communicate the IMSI to the UE PHY
-     * \param imsi the IMSI of the UE
-     */
-    virtual void SetImsi(uint64_t imsi) = 0;
 };
 
 /**
@@ -268,29 +233,8 @@ class LteUeCphySapUser
      */
     virtual void ReportUeMeasurements(UeMeasurementsParameters params) = 0;
 
-    /**
-     * \brief Send an out of sync indication to UE RRC.
-     *
-     * When the number of out-of-sync indications
-     * are equal to N310, RRC starts the T310 timer.
-     */
-    virtual void NotifyOutOfSync() = 0;
+    virtual void NotifyRadioLinkFailure (double lastSinrValue) = 0;
 
-    /**
-     * \brief Send an in sync indication to UE RRC.
-     *
-     * When the number of in-sync indications
-     * are equal to N311, RRC stops the T310 timer.
-     */
-    virtual void NotifyInSync() = 0;
-
-    /**
-     * \brief Reset the sync indication counter.
-     *
-     * Resets the sync indication counter of RRC if the Qin or Qout condition
-     * is not fulfilled for the number of consecutive frames.
-     */
-    virtual void ResetSyncIndicationCounter() = 0;
 };
 
 /**
@@ -319,17 +263,13 @@ class MemberLteUeCphySapProvider : public LteUeCphySapProvider
     uint16_t GetCellId() override;
     uint32_t GetDlEarfcn() override;
     void SetDlBandwidth(uint16_t dlBandwidth) override;
-    void ConfigureUplink(uint32_t ulEarfcn, uint16_t ulBandwidth) override;
+    void ConfigureUplink(uint32_t ulEarfcn, uint8_t ulBandwidth) override;
     void ConfigureReferenceSignalPower(int8_t referenceSignalPower) override;
     void SetRnti(uint16_t rnti) override;
     void SetTransmissionMode(uint8_t txMode) override;
     void SetSrsConfigurationIndex(uint16_t srcCi) override;
     void SetPa(double pa) override;
     void SetRsrpFilterCoefficient(uint8_t rsrpFilterCoefficient) override;
-    void ResetPhyAfterRlf() override;
-    void ResetRlfParams() override;
-    void StartInSyncDetection() override;
-    void SetImsi(uint64_t imsi) override;
 
   private:
     C* m_owner; ///< the owner class
@@ -385,14 +325,14 @@ MemberLteUeCphySapProvider<C>::GetDlEarfcn()
 
 template <class C>
 void
-MemberLteUeCphySapProvider<C>::SetDlBandwidth(uint16_t dlBandwidth)
+MemberLteUeCphySapProvider<C>::SetDlBandwidth(uint8_t dlBandwidth)
 {
     m_owner->DoSetDlBandwidth(dlBandwidth);
 }
 
 template <class C>
 void
-MemberLteUeCphySapProvider<C>::ConfigureUplink(uint32_t ulEarfcn, uint16_t ulBandwidth)
+MemberLteUeCphySapProvider<C>::ConfigureUplink(uint32_t ulEarfcn, uint8_t ulBandwidth)
 {
     m_owner->DoConfigureUplink(ulEarfcn, ulBandwidth);
 }
@@ -437,6 +377,31 @@ void
 MemberLteUeCphySapProvider<C>::SetRsrpFilterCoefficient(uint8_t rsrpFilterCoefficient)
 {
     m_owner->DoSetRsrpFilterCoefficient(rsrpFilterCoefficient);
+}
+
+template <class C>
+void
+MemberLteUeCphySapProvider<C>::ResetPhyAfterRlf ()
+{
+  m_owner->DoResetPhyAfterRlf ();
+}
+
+template <class C>
+void MemberLteUeCphySapProvider<C>::ResetRlfParams ()
+{
+  m_owner->DoResetRlfParams ();
+}
+
+template <class C>
+void MemberLteUeCphySapProvider<C>::StartInSnycDetection ()
+{
+  m_owner->DoStartInSnycDetection ();
+}
+
+template <class C>
+void MemberLteUeCphySapProvider<C>::SetImsi (uint64_t imsi)
+{
+  m_owner->DoSetImsi (imsi);
 }
 
 template <class C>
@@ -491,9 +456,7 @@ class MemberLteUeCphySapUser : public LteUeCphySapUser
     void RecvSystemInformationBlockType1(uint16_t cellId,
                                          LteRrcSap::SystemInformationBlockType1 sib1) override;
     void ReportUeMeasurements(LteUeCphySapUser::UeMeasurementsParameters params) override;
-    void NotifyOutOfSync() override;
-    void NotifyInSync() override;
-    void ResetSyncIndicationCounter() override;
+    void NotifyRadioLinkFailure (double lastSinrValue) override;
 
   private:
     C* m_owner; ///< the owner class
@@ -529,25 +492,9 @@ MemberLteUeCphySapUser<C>::ReportUeMeasurements(LteUeCphySapUser::UeMeasurements
     m_owner->DoReportUeMeasurements(params);
 }
 
-template <class C>
-void
-MemberLteUeCphySapUser<C>::NotifyOutOfSync()
+MemberLteUeCphySapUser<C>::NotifyRadioLinkFailure (double lastSinrValue)
 {
-    m_owner->DoNotifyOutOfSync();
-}
-
-template <class C>
-void
-MemberLteUeCphySapUser<C>::NotifyInSync()
-{
-    m_owner->DoNotifyInSync();
-}
-
-template <class C>
-void
-MemberLteUeCphySapUser<C>::ResetSyncIndicationCounter()
-{
-    m_owner->DoResetSyncIndicationCounter();
+  m_owner->DoNotifyRadioLinkFailure(lastSinrValue);
 }
 
 } // namespace ns3

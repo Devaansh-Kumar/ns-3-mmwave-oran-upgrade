@@ -30,7 +30,6 @@
 #include <ns3/nstime.h>
 #include <ns3/packet-burst.h>
 #include <ns3/packet.h>
-#include <ns3/traced-callback.h>
 
 #include <map>
 #include <vector>
@@ -59,21 +58,6 @@ class LteUeMac : public Object
     LteUeMac();
     ~LteUeMac() override;
     void DoDispose() override;
-
-    /**
-     * \brief TracedCallback signature for RA response timeout events
-     * exporting IMSI, contention flag, preamble transmission counter
-     * and the max limit of preamble transmission
-     *
-     * \param [in] imsi
-     * \param [in] contention
-     * \param [in] preambleTxCounter
-     * \param [in] maxPreambleTxLimit
-     */
-    typedef void (*RaResponseTimeoutTracedCallback)(uint64_t imsi,
-                                                    bool contention,
-                                                    uint8_t preambleTxCounter,
-                                                    uint8_t maxPreambleTxLimit);
 
     /**
      * \brief Get the LTE MAC SAP provider
@@ -189,17 +173,6 @@ class LteUeMac : public Object
      * \brief Reset function
      */
     void DoReset();
-    /**
-     * \brief Notify MAC about the successful RRC connection
-     * establishment.
-     */
-    void DoNotifyConnectionSuccessful();
-    /**
-     * Set IMSI
-     *
-     * \param imsi the IMSI of the UE
-     */
-    void DoSetImsi(uint64_t imsi);
 
     // forwarded from PHY SAP
     /**
@@ -278,7 +251,6 @@ class LteUeMac : public Object
     std::vector<uint8_t> m_miUlHarqProcessesPacketTimer; ///< timer for packet life in the buffer
 
     uint16_t m_rnti; ///< RNTI
-    uint16_t m_imsi; ///< IMSI
 
     bool m_rachConfigured;                                  ///< is RACH configured?
     LteUeCmacSapProvider::RachConfig m_rachConfig;          ///< RACH configuration
@@ -292,13 +264,6 @@ class LteUeMac : public Object
     uint32_t m_subframeNo;       ///< subframe number
     uint8_t m_raRnti;            ///< RA RNTI
     bool m_waitingForRaResponse; ///< waiting for RA response
-
-    /**
-     * \brief The `RaResponseTimeout` trace source. Fired RA response timeout.
-     * Exporting IMSI, contention flag, preamble transmission counter
-     * and the max limit of preamble transmission.
-     */
-    TracedCallback<uint64_t, bool, uint8_t, uint8_t> m_raResponseTimeoutTrace;
 };
 
 } // namespace ns3

@@ -265,24 +265,17 @@ LteNetDevice::SetPromiscReceiveCallback(PromiscReceiveCallback cb)
 void
 LteNetDevice::Receive(Ptr<Packet> p)
 {
-    NS_LOG_FUNCTION(this << p);
+    NS_LOG_FUNCTION (this << p);
+    uint8_t ipType;
 
-    Ipv4Header ipv4Header;
-    Ipv6Header ipv6Header;
+    p->CopyData (&ipType, 1);
+    ipType = (ipType>>4) & 0x0f;
 
-    if (p->PeekHeader(ipv4Header) != 0)
-    {
-        NS_LOG_LOGIC("IPv4 stack...");
-        m_rxCallback(this, p, Ipv4L3Protocol::PROT_NUMBER, Address());
-    }
-    else if (p->PeekHeader(ipv6Header) != 0)
-    {
-        NS_LOG_LOGIC("IPv6 stack...");
-        m_rxCallback(this, p, Ipv6L3Protocol::PROT_NUMBER, Address());
-    }
+    if (ipType == 0x04)
+    m_rxCallback (this, p, Ipv4L3Protocol::PROT_NUMBER, Address ());
+    else if (ipType == 0x06)
+        m_rxCallback (this, p, Ipv6L3Protocol::PROT_NUMBER, Address ());
     else
-    {
-        NS_ABORT_MSG("LteNetDevice::Receive - Unknown IP type...");
-    }
+        NS_LOG_UNCOND ("LteNetDevice::Receive - Unknown IP type...");
 }
 } // namespace ns3

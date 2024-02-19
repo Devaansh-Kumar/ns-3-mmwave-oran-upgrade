@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Nicola Baldo <nbaldo@cttc.es>
+ *
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Dual Connectivity functionalities
  */
 
 #include "lte-rrc-protocol-ideal.h"
@@ -36,13 +40,7 @@ namespace ns3
 
 NS_LOG_COMPONENT_DEFINE("LteRrcProtocolIdeal");
 
-/**
- * \ingroup lte
- *
- */
-
-/// RRC ideal message delay
-static const Time RRC_IDEAL_MSG_DELAY = MilliSeconds(0);
+static const Time RRC_IDEAL_MSG_DELAY = MicroSeconds (500);
 
 NS_OBJECT_ENSURE_REGISTERED(LteUeRrcProtocolIdeal);
 
@@ -174,35 +172,20 @@ LteUeRrcProtocolIdeal::DoSendMeasurementReport(LteRrcSap::MeasurementReport msg)
 }
 
 void
-LteUeRrcProtocolIdeal::DoSendIdealUeContextRemoveRequest(uint16_t rnti)
+LteUeRrcProtocolIdeal::DoSendNotifySecondaryCellConnected (uint16_t mmWaveRnti, uint16_t mmWaveCellId)
 {
-    NS_LOG_FUNCTION(this);
-
-    uint16_t cellId = m_rrc->GetCellId();
-    // re-initialize the RNTI and get the EnbLteRrcSapProvider for the
-    // eNB we are currently attached to or attempting random access to
-    // a target eNB
-    m_rnti = m_rrc->GetRnti();
-
-    NS_LOG_DEBUG("RNTI " << rnti << " sending UE context remove request to cell id " << cellId);
-    NS_ABORT_MSG_IF(m_rnti != rnti, "RNTI mismatch");
-
-    SetEnbRrcSapProvider(); // the provider has to be reset since the cell might have changed due to
-                            // handover
-    // ideally informing eNB
-    Simulator::Schedule(RRC_IDEAL_MSG_DELAY,
-                        &LteEnbRrcSapProvider::RecvIdealUeContextRemoveRequest,
+   Simulator::Schedule (RRC_IDEAL_MSG_DELAY,
+                        &LteEnbRrcSapProvider::RecvRrcSecondaryCellInitialAccessSuccessful,
                         m_enbRrcSapProvider,
-                        m_rnti);
+                        m_rnti,
+                        mmWaveRnti,
+                        mmWaveCellId);
 }
 
 void
 LteUeRrcProtocolIdeal::SetEnbRrcSapProvider()
 {
-    NS_LOG_FUNCTION(this);
-
     uint16_t cellId = m_rrc->GetCellId();
-    NS_LOG_DEBUG("RNTI " << m_rnti << " connected to cell " << cellId);
 
     // walk list of all nodes to get the peer eNB
     Ptr<LteEnbNetDevice> enbDev;
@@ -442,6 +425,24 @@ LteEnbRrcProtocolIdeal::DoSendRrcConnectionReject(uint16_t rnti, LteRrcSap::RrcC
                         &LteUeRrcSapProvider::RecvRrcConnectionReject,
                         GetUeRrcSapProvider(rnti),
                         msg);
+}
+
+void
+LteEnbRrcProtocolIdeal::DoSendRrcConnectionSwitch (uint16_t rnti, LteRrcSap::RrcConnectionSwitch msg)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY,
+           &LteUeRrcSapProvider::RecvRrcConnectionSwitch,
+           GetUeRrcSapProvider (rnti),
+           msg);
+}
+
+void
+LteEnbRrcProtocolIdeal::DoSendRrcConnectToMmWave (uint16_t rnti, uint16_t mmWaveCellId)
+{
+  Simulator::Schedule (RRC_IDEAL_MSG_DELAY,
+           &LteUeRrcSapProvider::RecvRrcConnectToMmWave,
+           GetUeRrcSapProvider (rnti),
+           mmWaveCellId);
 }
 
 /*
