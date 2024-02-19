@@ -21,7 +21,7 @@
 #define EPC_ENB_S1_SAP_H
 
 #include "eps-bearer.h"
-
+#include <stdint.h>
 #include <ns3/ipv4-address.h>
 
 #include <list>
@@ -101,52 +101,34 @@ class EpcEnbS1SapUser
     virtual ~EpcEnbS1SapUser();
 
     /**
-     * Parameters passed to InitialContextSetupRequest ()
-     */
-    struct InitialContextSetupRequestParameters
-    {
-        uint16_t rnti; /**< the RNTI identifying the UE */
-    };
+   * Parameters passed to DataRadioBearerSetupRequest ()
+   * 
+   */
+  struct DataRadioBearerSetupRequestParameters
+  {
+    uint16_t rnti;   /**< the RNTI identifying the UE for which the
+			DataRadioBearer is to be created */ 
+    EpsBearer bearer; /**< the characteristics of the bearer to be set
+                         up */
+    uint8_t bearerId; /**< the EPS Bearer Identifier */
+    uint32_t    gtpTeid; /**< S1-bearer GTP tunnel endpoint identifier, see 36.423 9.2.1 */
+    Ipv4Address transportLayerAddress; /**< IP Address of the SGW, see 36.423 9.2.1 */
+  };
 
-    /**
-     * Initial context setup request
-     *
-     * \param params Parameters
-     */
-    virtual void InitialContextSetupRequest(InitialContextSetupRequestParameters params) = 0;
+  /**
+   * request the setup of a DataRadioBearer
+   * 
+   */
+  virtual void DataRadioBearerSetupRequest (DataRadioBearerSetupRequestParameters params) = 0;
 
-    /**
-     * Parameters passed to DataRadioBearerSetupRequest ()
-     */
-    struct DataRadioBearerSetupRequestParameters
-    {
-        uint16_t rnti;    /**< the RNTI identifying the UE for which the
-                               DataRadioBearer is to be created */
-        EpsBearer bearer; /**< the characteristics of the bearer to be setup */
-        uint8_t bearerId; /**< the EPS Bearer Identifier */
-        uint32_t gtpTeid; /**< S1-bearer GTP tunnel endpoint identifier, see 36.423 9.2.1 */
-        Ipv4Address transportLayerAddress; /**< IP Address of the SGW, see 36.423 9.2.1 */
-    };
+  
+  struct PathSwitchRequestAcknowledgeParameters
+  {
+    uint16_t rnti;
+  };
 
-    /**
-     * Request the setup of a DataRadioBearer
-     *
-     * \param params Parameters
-     */
-    virtual void DataRadioBearerSetupRequest(DataRadioBearerSetupRequestParameters params) = 0;
-
-    /// PathSwitchRequestAcknowledgeParameters structure
-    struct PathSwitchRequestAcknowledgeParameters
-    {
-        uint16_t rnti; ///< RNTI
-    };
-
-    /**
-     * Request a path switch acknowledge
-     *
-     * \param params Parameters
-     */
-    virtual void PathSwitchRequestAcknowledge(PathSwitchRequestAcknowledgeParameters params) = 0;
+  virtual void PathSwitchRequestAcknowledge (PathSwitchRequestAcknowledgeParameters params) = 0;
+  
 };
 
 /**
@@ -222,23 +204,15 @@ template <class C>
 class MemberEpcEnbS1SapUser : public EpcEnbS1SapUser
 {
   public:
-    /**
-     * Constructor
-     *
-     * \param owner the owner class
-     */
-    MemberEpcEnbS1SapUser(C* owner);
+    MemberEpcEnbS1SapUser (C* owner);
 
-    // Delete default constructor to avoid misuse
-    MemberEpcEnbS1SapUser() = delete;
+  // inherited from EpcEnbS1SapUser
+  virtual void DataRadioBearerSetupRequest (DataRadioBearerSetupRequestParameters params);
+  virtual void PathSwitchRequestAcknowledge (PathSwitchRequestAcknowledgeParameters params);
 
-    // inherited from EpcEnbS1SapUser
-    void InitialContextSetupRequest(InitialContextSetupRequestParameters params) override;
-    void DataRadioBearerSetupRequest(DataRadioBearerSetupRequestParameters params) override;
-    void PathSwitchRequestAcknowledge(PathSwitchRequestAcknowledgeParameters params) override;
-
-  private:
-    C* m_owner; ///< owner class
+private:
+  MemberEpcEnbS1SapUser ();
+  C* m_owner;
 };
 
 template <class C>
@@ -247,12 +221,7 @@ MemberEpcEnbS1SapUser<C>::MemberEpcEnbS1SapUser(C* owner)
 {
 }
 
-template <class C>
-void
-MemberEpcEnbS1SapUser<C>::InitialContextSetupRequest(InitialContextSetupRequestParameters params)
-{
-    m_owner->DoInitialContextSetupRequest(params);
-}
+
 
 template <class C>
 void
