@@ -17,6 +17,8 @@
  * Authors:
  *   Jaume Nin <jnin@cttc.cat>
  *   Nicola Baldo <nbaldo@cttc.cat>
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Support for real S1AP link
  */
 
 #ifndef EPC_ENB_APPLICATION_H
@@ -33,7 +35,8 @@
 #include <ns3/socket.h>
 #include <ns3/traced-callback.h>
 #include <ns3/virtual-net-device.h>
-
+#include <ns3/lte-common.h>
+#include <ns3/eps-bearer.h>
 #include <map>
 
 namespace ns3
@@ -49,20 +52,14 @@ class EpcEnbS1SapProvider;
  */
 class EpcEnbApplication : public Application
 {
-    /// allow MemberEpcEnbS1SapProvider<EpcEnbApplication> class friend access
-    friend class MemberEpcEnbS1SapProvider<EpcEnbApplication>;
-    /// allow MemberEpcS1apSapEnb<EpcEnbApplication> class friend access
-    friend class MemberEpcS1apSapEnb<EpcEnbApplication>;
+  friend class MemberEpcEnbS1SapProvider<EpcEnbApplication>;
+  friend class MemberEpcS1apSapEnb<EpcEnbApplication>;
+  // inherited from Object
+public:
+  static TypeId GetTypeId (void);
+protected:
+  void DoDispose (void);
 
-  public:
-    /**
-     * \brief Get the type ID.
-     * \return the object TypeId
-     */
-    static TypeId GetTypeId();
-
-  protected:
-    void DoDispose() override;
 
   public:
     /**
@@ -314,6 +311,7 @@ class EpcEnbApplication : public Application
      * MME side of the S1-AP SAP
      *
      */
+    EpcS1apSapEnbProvider* m_s1apSapEnbProvider;
     EpcS1apSapMme* m_s1apSapMme;
 
     /**
