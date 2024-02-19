@@ -52,20 +52,14 @@ class EpcEnbS1SapProvider;
  */
 class EpcEnbApplication : public Application
 {
-    /// allow MemberEpcEnbS1SapProvider<EpcEnbApplication> class friend access
-    friend class MemberEpcEnbS1SapProvider<EpcEnbApplication>;
-    /// allow MemberEpcS1apSapEnb<EpcEnbApplication> class friend access
-    friend class MemberEpcS1apSapEnb<EpcEnbApplication>;
+  friend class MemberEpcEnbS1SapProvider<EpcEnbApplication>;
+  friend class MemberEpcS1apSapEnb<EpcEnbApplication>;
+  // inherited from Object
+public:
+  static TypeId GetTypeId (void);
+protected:
+  void DoDispose (void);
 
-  public:
-    /**
-     * \brief Get the type ID.
-     * \return the object TypeId
-     */
-    static TypeId GetTypeId();
-
-  protected:
-    void DoDispose() override;
 
   public:
     /**
