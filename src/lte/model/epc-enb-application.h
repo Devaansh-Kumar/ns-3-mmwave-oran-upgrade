@@ -17,6 +17,8 @@
  * Authors:
  *   Jaume Nin <jnin@cttc.cat>
  *   Nicola Baldo <nbaldo@cttc.cat>
+ * Modified by: Michele Polese <michele.polese@gmail.com>
+ *          Support for real S1AP link
  */
 
 #ifndef EPC_ENB_APPLICATION_H
@@ -33,7 +35,8 @@
 #include <ns3/socket.h>
 #include <ns3/traced-callback.h>
 #include <ns3/virtual-net-device.h>
-
+#include <ns3/lte-common.h>
+#include <ns3/eps-bearer.h>
 #include <map>
 
 namespace ns3
@@ -314,6 +317,7 @@ class EpcEnbApplication : public Application
      * MME side of the S1-AP SAP
      *
      */
+    EpcS1apSapEnbProvider* m_s1apSapEnbProvider;
     EpcS1apSapMme* m_s1apSapMme;
 
     /**

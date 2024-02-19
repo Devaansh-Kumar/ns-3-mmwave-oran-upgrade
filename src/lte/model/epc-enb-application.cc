@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
- *
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation;
@@ -109,18 +109,7 @@ EpcEnbApplication::EpcEnbApplication (Ptr<Socket> lteSocket, Ptr<Socket> lteSock
   m_s1apSapEnb = new MemberEpcS1apSapEnb<EpcEnbApplication> (this);
 }
 
-void
-EpcEnbApplication::AddS1Interface(Ptr<Socket> s1uSocket,
-                                  Ipv4Address enbAddress,
-                                  Ipv4Address sgwAddress)
-{
-    NS_LOG_FUNCTION(this << s1uSocket << enbAddress << sgwAddress);
 
-    m_s1uSocket = s1uSocket;
-    m_s1uSocket->SetRecvCallback(MakeCallback(&EpcEnbApplication::RecvFromS1uSocket, this));
-    m_enbS1uAddress = enbAddress;
-    m_sgwS1uAddress = sgwAddress;
-}
 
 EpcEnbApplication::~EpcEnbApplication()
 {
@@ -140,9 +129,9 @@ EpcEnbApplication::GetS1SapProvider()
 }
 
 void
-EpcEnbApplication::SetS1apSapMme(EpcS1apSapMme* s)
+EpcEnbApplication::SetS1apSapMme (EpcS1apSapEnbProvider * s)
 {
-    m_s1apSapMme = s;
+  m_s1apSapEnbProvider = s;
 }
 
 EpcS1apSapEnb*
@@ -158,7 +147,7 @@ EpcEnbApplication::DoInitialUeMessage(uint64_t imsi, uint16_t rnti)
     // side effect: create entry if not exist
     m_imsiRntiMap[imsi] = rnti;
   m_s1apSapEnbProvider->SendInitialUeMessage (imsi, rnti, imsi, m_cellId); // TODO if more than one MME is used, extend this call
-    m_s1apSapMme->InitialUeMessage(imsi, rnti, imsi, m_cellId);
+
 }
 
 void
@@ -207,29 +196,27 @@ EpcEnbApplication::DoUeContextRelease(uint16_t rnti)
         {
             uint32_t teid = bidIt->second;
             m_teidRbidMap.erase(teid);
-            NS_LOG_INFO("TEID: " << teid << " erased");
+
         }
         m_rbidTeidMap.erase(rntiIt);
-        NS_LOG_INFO("RNTI: " << rntiIt->first << " erased");
+
     }
 }
 
 void
-EpcEnbApplication::DoInitialContextSetupRequest(
-    uint64_t mmeUeS1Id,
-    uint16_t enbUeS1Id,
-    std::list<EpcS1apSapEnb::ErabToBeSetupItem> erabToBeSetupList)
+EpcEnbApplication::DoInitialContextSetupRequest (uint64_t mmeUeS1Id, uint16_t enbUeS1Id, std::list<EpcS1apSapEnb::ErabToBeSetupItem> erabToBeSetupList)
 {
-    NS_LOG_FUNCTION(this);
+  NS_LOG_FUNCTION (this);
+  NS_LOG_INFO("In EnpEnbApplication DoInitialContextSetupRequest size of the erabToBeSetupList is " << erabToBeSetupList.size());
 
-    uint64_t imsi = mmeUeS1Id;
-    auto imsiIt = m_imsiRntiMap.find(imsi);
-    NS_ASSERT_MSG(imsiIt != m_imsiRntiMap.end(), "unknown IMSI");
-    uint16_t rnti = imsiIt->second;
 
     for (auto erabIt = erabToBeSetupList.begin(); erabIt != erabToBeSetupList.end(); ++erabIt)
     {
-        // request the RRC to setup a radio bearer
+	// request the RRC to setup a radio bearer
+      uint64_t imsi = mmeUeS1Id;
+      std::map<uint64_t, uint16_t>::iterator imsiIt = m_imsiRntiMap.find (imsi);
+      NS_ASSERT_MSG (imsiIt != m_imsiRntiMap.end (), "unknown IMSI");
+      uint16_t rnti = imsiIt->second;
         EpcEnbS1SapUser::DataRadioBearerSetupRequestParameters params;
         params.rnti = rnti;
         params.bearer = erabIt->erabLevelQosParameters;
@@ -243,10 +230,6 @@ EpcEnbApplication::DoInitialContextSetupRequest(
         m_teidRbidMap[params.gtpTeid] = rbid;
     }
 
-    // Send Initial Context Setup Request to RRC
-    EpcEnbS1SapUser::InitialContextSetupRequestParameters params;
-    params.rnti = rnti;
-    m_s1SapUser->InitialContextSetupRequest(params);
 }
 
 void
@@ -281,7 +264,11 @@ EpcEnbApplication::RecvFromLteSocket(Ptr<Socket> socket)
     }
     Ptr<Packet> packet = socket->Recv();
 
-    EpsBearerTag tag;
+  /// \internal
+  /// Workaround for \bugid{231}
+  //SocketAddressTag satag;
+  //packet->RemovePacketTag (satag);    
+EpsBearerTag tag;
     bool found = packet->RemovePacketTag(tag);
     NS_ASSERT(found);
     uint16_t rnti = tag.GetRnti();
