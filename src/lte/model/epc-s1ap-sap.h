@@ -408,7 +408,7 @@ class MemberEpcS1apSapEnb : public EpcS1apSapEnb
     MemberEpcS1apSapEnb(C* owner);
 
     // Delete default constructor to avoid misuse
-    MemberEpcS1apSapEnb() = delete;
+    // MemberEpcS1apSapEnb() = delete;
 
     // inherited from EpcS1apSapEnb
     /**
@@ -441,11 +441,6 @@ class MemberEpcS1apSapEnb : public EpcS1apSapEnb
 template <class C>
 MemberEpcS1apSapEnb<C>::MemberEpcS1apSapEnb(C* owner)
     : m_owner(owner)
-{
-}
-template <class C>
-MemberEpcS1apSapEnb<C>::MemberEpcS1apSapEnb (C* owner)
-  : m_owner (owner)
 {
 }
 

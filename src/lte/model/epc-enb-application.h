@@ -71,7 +71,7 @@ protected:
      * LTE radio interface
      * \param cellId the identifier of the eNB
      */
-    EpcEnbApplication(Ptr<Socket> lteSocket, Ptr<Socket> lteSocket6, uint16_t cellId);
+    EpcEnbApplication(Ptr<Socket> lteSocket, Ptr<Socket> lteSocket6, Ptr<Socket> s1uSocket, Ipv4Address enbS1uAddress, Ipv4Address sgwS1uAddress, uint16_t cellId);
 
     /**
      * Add a S1-U interface to the eNB
@@ -110,7 +110,7 @@ protected:
      *
      * \param s the MME side of the S1-AP SAP
      */
-    void SetS1apSapMme(EpcS1apSapMme* s);
+    void SetS1apSapMme(EpcS1apSapEnbProvider* s);
 
     /**
      *
@@ -312,7 +312,6 @@ protected:
      *
      */
     EpcS1apSapEnbProvider* m_s1apSapEnbProvider;
-    EpcS1apSapMme* m_s1apSapMme;
 
     /**
      * ENB side of the S1-AP SAP

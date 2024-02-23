@@ -29,6 +29,7 @@
 #include "ns3/ipv4-address.h"
 #include <ns3/lte-rrc-sap.h>
 #include <ns3/lte-enb-cmac-sap.h>
+#include "ns3/eps-bearer.h"
 #include <bitset>
 #include <map>
 

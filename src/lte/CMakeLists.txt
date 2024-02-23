@@ -44,18 +44,20 @@ set(source_files
     model/cqa-ff-mac-scheduler.cc
     model/epc-enb-application.cc
     model/epc-enb-s1-sap.cc
-    model/epc-gtpc-header.cc
     model/epc-gtpu-header.cc
     model/epc-mme-application.cc
-    model/epc-pgw-application.cc
+    model/epc-mme.cc
+    model/epc-s1ap-header.cc
     model/epc-s11-sap.cc
     model/epc-s1ap-sap.cc
-    model/epc-sgw-application.cc
+    model/epc-s1ap.cc
+    model/epc-sgw-pgw-application.cc
     model/epc-tft-classifier.cc
     model/epc-tft.cc
     model/epc-ue-nas.cc
     model/epc-x2-header.cc
     model/epc-x2-sap.cc
+    model/epc-x2-tag.cc
     model/epc-x2.cc
     model/eps-bearer-tag.cc
     model/eps-bearer.cc
@@ -117,6 +119,7 @@ set(source_files
     model/lte-rlc-sequence-number.cc
     model/lte-rlc-tag.cc
     model/lte-rlc-tm.cc
+    model/lte-rlc-um-lowlat.cc
     model/lte-rlc-um.cc
     model/lte-rlc.cc
     model/lte-rrc-header.cc
@@ -137,6 +140,8 @@ set(source_files
     model/lte-ue-power-control.cc
     model/lte-ue-rrc.cc
     model/lte-vendor-specific-parameters.cc
+    model/mc-enb-pdcp.cc
+    model/mc-ue-pdcp.cc
     model/no-op-component-carrier-manager.cc
     model/no-op-handover-algorithm.cc
     model/pf-ff-mac-scheduler.cc
@@ -177,18 +182,20 @@ set(header_files
     model/cqa-ff-mac-scheduler.h
     model/epc-enb-application.h
     model/epc-enb-s1-sap.h
-    model/epc-gtpc-header.h
     model/epc-gtpu-header.h
     model/epc-mme-application.h
-    model/epc-pgw-application.h
+    model/epc-mme.h
+    model/epc-s1ap-header.h
     model/epc-s11-sap.h
     model/epc-s1ap-sap.h
-    model/epc-sgw-application.h
+    model/epc-s1ap.h
+    model/epc-sgw-pgw-application.h
     model/epc-tft-classifier.h
     model/epc-tft.h
     model/epc-ue-nas.h
     model/epc-x2-header.h
     model/epc-x2-sap.h
+    model/epc-x2-tag.h
     model/epc-x2.h
     model/eps-bearer-tag.h
     model/eps-bearer.h
@@ -250,6 +257,7 @@ set(header_files
     model/lte-rlc-sequence-number.h
     model/lte-rlc-tag.h
     model/lte-rlc-tm.h
+    model/lte-rlc-um-lowlat.h
     model/lte-rlc-um.h
     model/lte-rlc.h
     model/lte-rrc-header.h
@@ -270,6 +278,8 @@ set(header_files
     model/lte-ue-power-control.h
     model/lte-ue-rrc.h
     model/lte-vendor-specific-parameters.h
+    model/mc-enb-pdcp.h
+    model/mc-ue-pdcp.h
     model/no-op-component-carrier-manager.h
     model/no-op-handover-algorithm.h
     model/pf-ff-mac-scheduler.h

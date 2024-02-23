@@ -161,7 +161,7 @@ EpcEnbApplication::DoPathSwitchRequest(EpcEnbS1SapProvider::PathSwitchRequestPar
     m_imsiRntiMap[imsi] = params.rnti;
 
     uint16_t gci = params.cellId;
-    std::list<EpcS1apSapMme::ErabSwitchedInDownlinkItem> erabToBeSwitchedInDownlinkList;
+    std::list<EpcS1apSap::ErabSwitchedInDownlinkItem> erabToBeSwitchedInDownlinkList;
     for (auto bit = params.bearersToBeSwitched.begin(); bit != params.bearersToBeSwitched.end();
          ++bit)
     {
@@ -175,7 +175,7 @@ EpcEnbApplication::DoPathSwitchRequest(EpcEnbS1SapProvider::PathSwitchRequestPar
         m_rbidTeidMap[params.rnti][bit->epsBearerId] = teid;
         m_teidRbidMap[teid] = rbid;
 
-        EpcS1apSapMme::ErabSwitchedInDownlinkItem erab;
+        EpcS1apSap::ErabSwitchedInDownlinkItem erab;
         erab.erabId = bit->epsBearerId;
         erab.enbTransportLayerAddress = m_enbS1uAddress;
         erab.enbTeid = bit->teid;
@@ -367,8 +367,8 @@ void
 EpcEnbApplication::DoReleaseIndication(uint64_t imsi, uint16_t rnti, uint8_t bearerId)
 {
     NS_LOG_FUNCTION(this << bearerId);
-    std::list<EpcS1apSapMme::ErabToBeReleasedIndication> erabToBeReleaseIndication;
-    EpcS1apSapMme::ErabToBeReleasedIndication erab;
+    std::list<EpcS1apSap::ErabToBeReleasedIndication> erabToBeReleaseIndication;
+    EpcS1apSap::ErabToBeReleasedIndication erab;
     erab.erabId = bearerId;
     erabToBeReleaseIndication.push_back(erab);
     // From 3GPP TS 23401-950 Section 5.4.4.2, enB sends EPS bearer Identity in Bearer Release
