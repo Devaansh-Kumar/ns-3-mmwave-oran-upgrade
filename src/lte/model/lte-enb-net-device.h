@@ -24,6 +24,7 @@
 #define LTE_ENB_NET_DEVICE_H
 
 #include "component-carrier.h"
+#include "component-carrier-enb.h"
 #include "lte-net-device.h"
 
 #include "ns3/event-id.h"
@@ -212,14 +213,13 @@ class LteEnbNetDevice : public LteNetDevice
      *
      */
 
-    void SetCcMap(std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> ccm);
+    void SetCcMap(std::map<uint8_t, Ptr<ComponentCarrierEnb>> ccm);
 
     /**
      * \returns  The Component Carrier Map of the Enb.
      *
      */
 
-    std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> GetCcMap() const;
     std::map< uint8_t, Ptr<ComponentCarrierEnb> >  GetCcMap (void);
 
   void SetE2Termination (Ptr<E2Termination> e2term);
@@ -270,9 +270,9 @@ class LteEnbNetDevice : public LteNetDevice
 
     uint16_t m_cellId; /**< Cell Identifier. Part of the CGI, see TS 29.274, section 8.21.1  */
 
-    uint16_t m_dlBandwidth; /**<DEPRECATE - It is maintained for backward compatibility after adding
+    uint8_t m_dlBandwidth; /**<DEPRECATE - It is maintained for backward compatibility after adding
                                CA feature- downlink bandwidth in RBs */
-    uint16_t m_ulBandwidth; /**<DEPRECATE - It is maintained for backward compatibility after adding
+    uint8_t m_ulBandwidth; /**<DEPRECATE - It is maintained for backward compatibility after adding
                                CA feature- uplink bandwidth in RBs */
 
     uint32_t m_dlEarfcn; /**<DEPRECATE - It is maintained for backward compatibility after adding CA
@@ -283,7 +283,7 @@ class LteEnbNetDevice : public LteNetDevice
     uint16_t m_csgId;     ///< CSG ID
     bool m_csgIndication; ///< CSG indication
 
-    std::map<uint8_t, Ptr<ComponentCarrierBaseStation>> m_ccMap; /**< ComponentCarrier map */
+    std::map<uint8_t, Ptr<ComponentCarrierEnb>> m_ccMap; /**< ComponentCarrier map */
 
     Ptr<LteEnbComponentCarrierManager>
         m_componentCarrierManager; ///< the component carrier manager of this eNb

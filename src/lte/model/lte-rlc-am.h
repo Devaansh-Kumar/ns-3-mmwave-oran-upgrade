@@ -38,6 +38,7 @@
 #include <fstream>
 #include <string>
 
+#include "ns3/codel-queue-disc.h"
 namespace ns3
 {
 
@@ -115,8 +116,8 @@ class LteRlcAm : public LteRlc
      * Notify HARQ delivery failure
      */
     void DoNotifyHarqDeliveryFailure() override;
-    void DoNotifyDlHarqDeliveryFailure (uint8_t harqId) override;
-    void DoNotifyUlHarqDeliveryFailure (uint8_t harqId) override;
+    void DoNotifyDlHarqDeliveryFailure (uint8_t harqId);
+    void DoNotifyUlHarqDeliveryFailure (uint8_t harqId);
     void DoReceivePdu(LteMacSapUser::ReceivePduParameters rxPduParams) override;
 
   private:

@@ -56,7 +56,7 @@
 #include <ns3/object-factory.h>
 #include <ns3/lte-radio-bearer-info.h>
 #include <cstdint>
-#include "encode_e2apv1.hpp"
+#include "e2sim/encode_e2apv1.hpp"
 #include <fstream>
 #include <sstream>
 #include <ns3/lte-indication-message-helper.h>

@@ -83,7 +83,7 @@ class EmuEpcHelper : public EpcHelper
     virtual void DoDispose ();
 
     // inherited from EpcHelper
-    void AddEnb(Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice, std::vector<uint16_t> cellIds) override;
+    virtual void AddEnb(Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice, std::vector<uint16_t> cellIds);
     virtual void AddUe (Ptr<NetDevice> ueLteDevice, uint64_t imsi);
     void AddX2Interface(Ptr<Node> enbNode1, Ptr<Node> enbNode2) override;
     virtual uint8_t ActivateEpsBearer (Ptr<NetDevice> ueLteDevice, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer);

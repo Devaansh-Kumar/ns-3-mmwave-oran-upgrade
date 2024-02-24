@@ -756,7 +756,7 @@ private:
      * UE CONTEXT RELEASE is received.
      */
     EventId m_handoverLeavingTimeout;
-    td::vector < Ptr<Packet> > m_x2forwardingBuffer;
+    std::vector < Ptr<Packet> > m_x2forwardingBuffer;
     uint32_t m_x2forwardingBufferSize;
     uint32_t m_maxx2forwardingBufferSize;
 
