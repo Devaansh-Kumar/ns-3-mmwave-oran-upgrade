@@ -452,7 +452,7 @@ RadioBearerStatsConnector::ConnectSrb1TracesUe (std::string ueRrcPath, uint64_t 
 {
   NS_LOG_FUNCTION (this << imsi << cellId << rnti);
    if (m_rlcStats)
-    {ConnectDrbTracesUe
+    {
       Ptr<BoundCallbackArgument> arg = Create<BoundCallbackArgument> ();
       arg->imsi = imsi;
       arg->cellId = cellId;

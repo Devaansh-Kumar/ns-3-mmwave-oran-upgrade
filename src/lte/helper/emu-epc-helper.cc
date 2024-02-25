@@ -382,7 +382,7 @@ EmuEpcHelper::ActivateEpsBearer (Ptr<NetDevice> ueDevice, uint64_t imsi, Ptr<Epc
   Ptr<Node> ueNode = ueDevice->GetNode ();
   Ptr<Ipv4> ueIpv4 = ueNode->GetObject<Ipv4> ();
   Ptr<Ipv6> ueIpv6 = ueNode->GetObject<Ipv6> ();
-  NS_ASSERT_MSG (ueIpv4 != 0 || ueIpv6 != 0, "UEs need to have IPv4/IPv6 installed before EPS bearers can be activated");
+  NS_ASSERT_MSG (ueIpv4 != nullptr || ueIpv6 != nullptr, "UEs need to have IPv4/IPv6 installed before EPS bearers can be activated");
 
   if (ueIpv4)
     {
@@ -425,7 +425,7 @@ EmuEpcHelper::ActivateEpsBearer (Ptr<NetDevice> ueDevice, Ptr<EpcUeNas> ueNas, u
   Ptr<Node> ueNode = ueDevice->GetNode ();
   Ptr<Ipv4> ueIpv4 = ueNode->GetObject<Ipv4> ();
   Ptr<Ipv6> ueIpv6 = ueNode->GetObject<Ipv6> ();
-  NS_ASSERT_MSG (ueIpv4 != 0 || ueIpv6 != 0, "UEs need to have IPv4/IPv6 installed before EPS bearers can be activated");
+  NS_ASSERT_MSG (ueIpv4 != nullptr || ueIpv6 != nullptr, "UEs need to have IPv4/IPv6 installed before EPS bearers can be activated");
 
   if (ueIpv4)
     {
