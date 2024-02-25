@@ -123,7 +123,7 @@ EmuEpcHelper::GetTypeId()
                           "First 5 bytes of the eNB MAC address base",
                           StringValue("00:00:00:eb:00"),
                           MakeStringAccessor(&EmuEpcHelper::m_enbMacAddressBase),
-                          MakeStringChecker())
+                          MakeStringChecker()),
             AddAttribute ("S1apLinkDataRate",
                           "The data rate to be used for the S1-AP link to be created",
                           DataRateValue (DataRate ("10Mb/s")),
@@ -263,9 +263,9 @@ EmuEpcHelper::DoDispose()
     m_sgwPgwApp = 0;
     m_sgwPgw->Dispose ();
 }
-
+//virtual void AddEnb(Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice, std::vector<uint16_t> cellIds);
 void
-EmuEpcHelper::AddEnb(Ptr<Node> enb, Ptr<NetDevice> lteEnbNetDevice, uint16_t cellId)
+EmuEpcHelper::AddEnb(Ptr<Node> enb, Ptr<NetDevice> lteEnbNetDevice, std::vector<uint16_t> cellIds)
 {
     NS_LOG_FUNCTION(this << enb << lteEnbNetDevice << cellIds.size());
 

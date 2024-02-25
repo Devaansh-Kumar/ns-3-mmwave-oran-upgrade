@@ -270,7 +270,11 @@ class MemberLteUeCphySapProvider : public LteUeCphySapProvider
     void SetSrsConfigurationIndex(uint16_t srcCi) override;
     void SetPa(double pa) override;
     void SetRsrpFilterCoefficient(uint8_t rsrpFilterCoefficient) override;
-
+    void SetDlBandwidth(uint8_t dlBandwidth) override;
+    void ResetPhyAfterRlf(); override;
+    void ResetRlfParams() override;
+    void StartInSnycDetection () override;
+    
   private:
     C* m_owner; ///< the owner class
 };
