@@ -274,6 +274,8 @@ class MemberLteUeCphySapProvider : public LteUeCphySapProvider
     void ResetPhyAfterRlf(); override;
     void ResetRlfParams() override;
     void StartInSnycDetection () override;
+    void SetImsi(uint64_t imsi) override;
+    
     
   private:
     C* m_owner; ///< the owner class
@@ -383,12 +385,6 @@ MemberLteUeCphySapProvider<C>::SetRsrpFilterCoefficient(uint8_t rsrpFilterCoeffi
     m_owner->DoSetRsrpFilterCoefficient(rsrpFilterCoefficient);
 }
 
-template <class C>
-void
-MemberLteUeCphySapProvider<C>::ResetPhyAfterRlf ()
-{
-  m_owner->DoResetPhyAfterRlf ();
-}
 
 template <class C>
 void MemberLteUeCphySapProvider<C>::ResetRlfParams ()
