@@ -124,7 +124,7 @@ EmuEpcHelper::GetTypeId()
                           StringValue("00:00:00:eb:00"),
                           MakeStringAccessor(&EmuEpcHelper::m_enbMacAddressBase),
                           MakeStringChecker()),
-            AddAttribute ("S1apLinkDataRate",
+            ../AddAttribute ("S1apLinkDataRate",
                           "The data rate to be used for the S1-AP link to be created",
                           DataRateValue (DataRate ("10Mb/s")),
                           MakeDataRateAccessor (&EmuEpcHelper::m_s1apLinkDataRate),

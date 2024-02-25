@@ -1,3 +1,4 @@
+/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011-2013 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
@@ -68,7 +69,7 @@ public:
   /**
    * Destructor
    */
-  virtual ~PointToPointEpcHelper ();
+   ~PointToPointEpcHelper () override;
 
   // inherited from Object
   /**
@@ -77,20 +78,20 @@ public:
    */
   static TypeId GetTypeId (void);
   TypeId GetInstanceTypeId () const;
-  virtual void DoDispose ();
+  virtual void DoDispose ()override;
 
   // inherited from EpcHelper
-  virtual void AddEnb (Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice, uint16_t cellId);
-  virtual void AddUe (Ptr<NetDevice> ueLteDevice, uint64_t imsi);
-  virtual void AddX2Interface (Ptr<Node> enbNode1, Ptr<Node> enbNode2);
-  virtual uint8_t ActivateEpsBearer (Ptr<NetDevice> ueLteDevice, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer);
-  virtual uint8_t ActivateEpsBearer (Ptr<NetDevice> ueLteDevice, Ptr<EpcUeNas> ueNas, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer);
-  virtual Ptr<Node> GetPgwNode ();
-  virtual Ptr<Node> GetMmeNode ();
-  virtual Ipv4InterfaceContainer AssignUeIpv4Address (NetDeviceContainer ueDevices);
-  virtual Ipv6InterfaceContainer AssignUeIpv6Address (NetDeviceContainer ueDevices);
-  virtual Ipv4Address GetUeDefaultGatewayAddress ();
-  virtual Ipv6Address GetUeDefaultGatewayAddress6 ();
+   void AddEnb (Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice, uint16_t cellId)override;
+   void AddUe (Ptr<NetDevice> ueLteDevice, uint64_t imsi)override;
+   void AddX2Interface (Ptr<Node> enbNode1, Ptr<Node> enbNode2)override;
+   uint8_t ActivateEpsBearer (Ptr<NetDevice> ueLteDevice, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer)override;
+   uint8_t ActivateEpsBearer (Ptr<NetDevice> ueLteDevice, Ptr<EpcUeNas> ueNas, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer)override;
+   Ptr<Node> GetPgwNode ()override;
+   Ptr<Node> GetMmeNode ()override;
+   Ipv4InterfaceContainer AssignUeIpv4Address (NetDeviceContainer ueDevices)override;
+   Ipv6InterfaceContainer AssignUeIpv6Address (NetDeviceContainer ueDevices)override;
+   Ipv4Address GetUeDefaultGatewayAddress ()override;
+   Ipv6Address GetUeDefaultGatewayAddress6 ()override;
 
 
 
