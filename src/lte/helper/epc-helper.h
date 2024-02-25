@@ -85,7 +85,7 @@ class EpcHelper : public Object
      */
     virtual void AddEnb(Ptr<Node> enbNode,
                         Ptr<NetDevice> lteEnbNetDevice,
-                        uint16_t cellId) = 0;
+                        std::vector<uint16_t> cellIds) = 0;
 
     /**
      * Notify the EPC of the existence of a new UE which might attach at a later time

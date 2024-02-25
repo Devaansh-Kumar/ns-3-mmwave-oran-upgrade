@@ -169,7 +169,7 @@ public:
    * \param enb2X2Address the address of the neighbouring eNodeB
    */
   void AddX2Interface (uint16_t enb1CellId, Ipv4Address enb1X2Address,
-                       uint16_t enb2CellId, Ipv4Address enb2X2Address);
+                       uint16_t enb2CellIds, Ipv4Address enb2X2Address);
 
 
   /**
