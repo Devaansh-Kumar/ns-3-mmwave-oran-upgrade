@@ -212,7 +212,7 @@ UeManager::DoInitialize()
         rlc->SetLteMacSapProvider(m_rrc->m_macSapProvider);
         rlc->SetRnti(m_rnti);
         rlc->SetLcId(lcid);
-r       rlc->SetImsi (m_imsi);
+        rlc->SetImsi (m_imsi);
         m_srb0 = CreateObject<LteSignalingRadioBearerInfo>();
         m_srb0->m_rlc = rlc;
         m_srb0->m_srbIdentity = 0;
@@ -417,6 +417,7 @@ UeManager::SetImsi(uint64_t imsi)
 {
     m_imsi = imsi;
 }
+
 void
 UeManager::SetIsMc (bool isMc)
 {
@@ -697,7 +698,6 @@ UeManager::ScheduleRrcConnectionReconfiguration()
     {
     case INITIAL_RANDOM_ACCESS:
     case CONNECTION_SETUP:
-    case ATTACH_REQUEST:
     case CONNECTION_RECONFIGURATION:
     case CONNECTION_REESTABLISHMENT:
     case HANDOVER_PREPARATION:
@@ -889,7 +889,7 @@ UeManager::MergeBuffers(std::vector < LteRlcAm::RetxPdu > first, std::vector < L
   bool end_1_reached = false;
   bool end_2_reached = false;
   while (it_1 != first.end() && it_2 != second.end()){
-    while ((*it_1).m_pdu == 0){
+    while (!(*it_1).m_pdu){
       ++it_1;
       if(it_1 == first.end())
       {
@@ -2105,7 +2105,8 @@ UeManager::RecvMeasurementReport(LteRrcSap::MeasurementReport msg)
                                         msg);
 
 } // end of UeManager::RecvMeasurementReport
-oid
+
+void
 UeManager::RecvRrcSecondaryCellInitialAccessSuccessful(uint16_t mmWaveRnti, uint16_t mmWaveCellId)
 {
   m_mmWaveCellId = mmWaveCellId;

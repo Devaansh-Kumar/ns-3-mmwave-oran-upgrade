@@ -356,7 +356,7 @@ PointToPointEpcHelper::AddEnb (Ptr<Node> enb, Ptr<NetDevice> lteEnbNetDevice, ui
   Ptr<EpcEnbApplication> enbApp = CreateObject<EpcEnbApplication> (enbLteSocket, enbLteSocket6, enbS1uSocket, enbAddress, sgwAddress, cellId);
   enb->AddApplication (enbApp);
   NS_ASSERT (enb->GetNApplications () == 1);
-  NS_ASSERT_MSG (enb->GetApplication (0)->GetObject<EpcEnbApplication> () != 0, "cannot retrieve EpcEnbApplication");
+  NS_ASSERT_MSG (enb->GetApplication (0)->GetObject<EpcEnbApplication> (), "cannot retrieve EpcEnbApplication");
   NS_LOG_LOGIC ("enb: " << enb << ", enb->GetApplication (0): " << enb->GetApplication (0));
 
 
@@ -454,7 +454,7 @@ PointToPointEpcHelper::ActivateEpsBearer (Ptr<NetDevice> ueDevice, uint64_t imsi
   Ptr<Node> ueNode = ueDevice->GetNode ();
   Ptr<Ipv4> ueIpv4 = ueNode->GetObject<Ipv4> ();
   Ptr<Ipv6> ueIpv6 = ueNode->GetObject<Ipv6> ();
-  NS_ASSERT_MSG (ueIpv4 != 0, "UEs need to have IPv4 installed before EPS bearers can be activated");
+  NS_ASSERT_MSG (ueIpv4, "UEs need to have IPv4 installed before EPS bearers can be activated");
 
   if (ueIpv4)
     {

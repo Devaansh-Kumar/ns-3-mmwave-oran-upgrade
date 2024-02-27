@@ -81,13 +81,13 @@ public:
   virtual void DoDispose ()override;
 
   // inherited from EpcHelper
-   void AddEnb (Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice, uint16_t cellId)override;
-   void AddUe (Ptr<NetDevice> ueLteDevice, uint64_t imsi)override;
-   void AddX2Interface (Ptr<Node> enbNode1, Ptr<Node> enbNode2)override;
+   void AddEnb (Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice, uint16_t cellId);
+   void AddUe (Ptr<NetDevice> ueLteDevice, uint64_t imsi) override;
+   void AddX2Interface (Ptr<Node> enbNode1, Ptr<Node> enbNode2) override;
    uint8_t ActivateEpsBearer (Ptr<NetDevice> ueLteDevice, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer)override;
    uint8_t ActivateEpsBearer (Ptr<NetDevice> ueLteDevice, Ptr<EpcUeNas> ueNas, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer)override;
-   Ptr<Node> GetPgwNode ()override;
-   Ptr<Node> GetMmeNode ()override;
+   Ptr<Node> GetPgwNode ();
+   Ptr<Node> GetMmeNode ();
    Ipv4InterfaceContainer AssignUeIpv4Address (NetDeviceContainer ueDevices)override;
    Ipv6InterfaceContainer AssignUeIpv6Address (NetDeviceContainer ueDevices)override;
    Ipv4Address GetUeDefaultGatewayAddress ()override;

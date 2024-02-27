@@ -99,7 +99,7 @@ EmuEpcHelper::~EmuEpcHelper()
 TypeId
 EmuEpcHelper::GetTypeId()
 {
-    static TypeId tid =
+    TypeId tid =
         TypeId("ns3::EmuEpcHelper")
             .SetParent<EpcHelper>()
             .SetGroupName("Lte")
@@ -123,12 +123,12 @@ EmuEpcHelper::GetTypeId()
                           "First 5 bytes of the eNB MAC address base",
                           StringValue("00:00:00:eb:00"),
                           MakeStringAccessor(&EmuEpcHelper::m_enbMacAddressBase),
-                          MakeStringChecker()),
-            ../AddAttribute ("S1apLinkDataRate",
+                          MakeStringChecker())
+            .AddAttribute ("S1apLinkDataRate",
                           "The data rate to be used for the S1-AP link to be created",
                           DataRateValue (DataRate ("10Mb/s")),
                           MakeDataRateAccessor (&EmuEpcHelper::m_s1apLinkDataRate),
-                          MakeDataRateChecker ()),
+                          MakeDataRateChecker ())
             .AddAttribute ("S1apLinkDelay",
                           "The delay to be used for the S1-AP link to be created",
                           TimeValue (Seconds (0.1)),
