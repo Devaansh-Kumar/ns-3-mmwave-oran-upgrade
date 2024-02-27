@@ -99,7 +99,7 @@ EmuEpcHelper::~EmuEpcHelper()
 TypeId
 EmuEpcHelper::GetTypeId()
 {
-    static TypeId tid =
+    TypeId tid =
         TypeId("ns3::EmuEpcHelper")
             .SetParent<EpcHelper>()
             .SetGroupName("Lte")
@@ -124,7 +124,7 @@ EmuEpcHelper::GetTypeId()
                           StringValue("00:00:00:eb:00"),
                           MakeStringAccessor(&EmuEpcHelper::m_enbMacAddressBase),
                           MakeStringChecker())
-            AddAttribute ("S1apLinkDataRate",
+            .AddAttribute ("S1apLinkDataRate",
                           "The data rate to be used for the S1-AP link to be created",
                           DataRateValue (DataRate ("10Mb/s")),
                           MakeDataRateAccessor (&EmuEpcHelper::m_s1apLinkDataRate),
@@ -263,11 +263,11 @@ EmuEpcHelper::DoDispose()
     m_sgwPgwApp = 0;
     m_sgwPgw->Dispose ();
 }
-
+//virtual void AddEnb(Ptr<Node> enbNode, Ptr<NetDevice> lteEnbNetDevice, std::vector<uint16_t> cellIds);
 void
 EmuEpcHelper::AddEnb(Ptr<Node> enb, Ptr<NetDevice> lteEnbNetDevice, uint16_t cellId)
 {
-    NS_LOG_FUNCTION(this << enb << lteEnbNetDevice << cellIds.size());
+    NS_LOG_FUNCTION(this << enb << lteEnbNetDevice << cellId);
 
     Initialize ();
 
@@ -280,14 +280,14 @@ EmuEpcHelper::AddEnb(Ptr<Node> enb, Ptr<NetDevice> lteEnbNetDevice, uint16_t cel
 
     // Create an EmuFdNetDevice for the eNB to connect with the SGW and other eNBs
     EmuFdNetDeviceHelper emu;
-    NS_LOG_LOGIC("eNB cellId: " << cellIds.at(0));
+    NS_LOG_LOGIC("eNB cellId: " << cellId);
     NS_LOG_LOGIC("eNB device: " << m_enbDeviceName);
     emu.SetDeviceName(m_enbDeviceName);
     NetDeviceContainer enbDevices = emu.Install(enb);
 
     std::ostringstream enbMacAddress;
     enbMacAddress << m_enbMacAddressBase << ":" << std::hex << std::setfill('0') << std::setw(2)
-                  << cellIds.at(0);
+                  << cellId;
     NS_LOG_LOGIC("eNB MAC address: " << enbMacAddress.str());
     Ptr<NetDevice> enbDev = enbDevices.Get(0);
     enbDev->SetAttribute("Address", Mac48AddressValue(enbMacAddress.str().c_str()));
@@ -353,8 +353,8 @@ EmuEpcHelper::AddX2Interface(Ptr<Node> enb1, Ptr<Node> enb2)
     uint16_t enb2CellId = enb2CellIds.at(0);
     NS_LOG_LOGIC("LteEnbNetDevice #2 = " << enb2LteDev << " - CellId = " << enb2CellId);
 
-    enb1X2->AddX2Interface(enb1CellId, enb1Addr, enb2CellIds, enb2Addr);
-    enb2X2->AddX2Interface(enb2CellId, enb2Addr, enb1CellIds, enb1Addr);
+    enb1X2->AddX2Interface(enb1CellId, enb1Addr, enb2CellId, enb2Addr);
+    enb2X2->AddX2Interface(enb2CellId, enb2Addr, enb1CellId, enb1Addr);
 
     enb1LteDev->GetRrc()->AddX2Neighbour(enb2LteDev->GetCellId());
     enb2LteDev->GetRrc()->AddX2Neighbour(enb1LteDev->GetCellId());
@@ -382,7 +382,7 @@ EmuEpcHelper::ActivateEpsBearer (Ptr<NetDevice> ueDevice, uint64_t imsi, Ptr<Epc
   Ptr<Node> ueNode = ueDevice->GetNode ();
   Ptr<Ipv4> ueIpv4 = ueNode->GetObject<Ipv4> ();
   Ptr<Ipv6> ueIpv6 = ueNode->GetObject<Ipv6> ();
-  NS_ASSERT_MSG (ueIpv4 != 0 || ueIpv6 != 0, "UEs need to have IPv4/IPv6 installed before EPS bearers can be activated");
+  NS_ASSERT_MSG (ueIpv4 != nullptr || ueIpv6 != nullptr, "UEs need to have IPv4/IPv6 installed before EPS bearers can be activated");
 
   if (ueIpv4)
     {
@@ -425,7 +425,7 @@ EmuEpcHelper::ActivateEpsBearer (Ptr<NetDevice> ueDevice, Ptr<EpcUeNas> ueNas, u
   Ptr<Node> ueNode = ueDevice->GetNode ();
   Ptr<Ipv4> ueIpv4 = ueNode->GetObject<Ipv4> ();
   Ptr<Ipv6> ueIpv6 = ueNode->GetObject<Ipv6> ();
-  NS_ASSERT_MSG (ueIpv4 != 0 || ueIpv6 != 0, "UEs need to have IPv4/IPv6 installed before EPS bearers can be activated");
+  NS_ASSERT_MSG (ueIpv4 != nullptr || ueIpv6 != nullptr, "UEs need to have IPv4/IPv6 installed before EPS bearers can be activated");
 
   if (ueIpv4)
     {

@@ -322,7 +322,7 @@ RadioBearerStatsConnector::ConnectSrb0Traces (std::string context, uint64_t imsi
   std::map<CellIdRnti, std::string>::iterator it = m_ueManagerPathByCellIdRnti.find (key);
   NS_ASSERT (it != m_ueManagerPathByCellIdRnti.end ());
   std::string ueManagerPath = it->second;
-  NS_LOG_LOGIC (this << " ueManagerPath: " << ConnectDrbTracesUeueManagerPath);
+  NS_LOG_LOGIC (this << " ueManagerPath: " << ueManagerPath);
   m_ueManagerPathByCellIdRnti.erase (it);
 
   if (m_rlcStats)
@@ -452,7 +452,7 @@ RadioBearerStatsConnector::ConnectSrb1TracesUe (std::string ueRrcPath, uint64_t 
 {
   NS_LOG_FUNCTION (this << imsi << cellId << rnti);
    if (m_rlcStats)
-    {ConnectDrbTracesUe
+    {
       Ptr<BoundCallbackArgument> arg = Create<BoundCallbackArgument> ();
       arg->imsi = imsi;
       arg->cellId = cellId;

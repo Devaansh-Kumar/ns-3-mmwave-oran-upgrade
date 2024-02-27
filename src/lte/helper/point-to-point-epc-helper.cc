@@ -1,5 +1,7 @@
+/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2011-2019 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2011-2013 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2016, University of Padova, Dep. of Information Engineering, SIGNET lab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -14,11 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Authors:
- *   Jaume Nin <jnin@cttc.es>
- *   Nicola Baldo <nbaldo@cttc.es>
- *   Manuel Requena <manuel.requena@cttc.es>
- * 
+ * Author: Jaume Nin <jnin@cttc.es>
+ *         Nicola Baldo <nbaldo@cttc.es>
+ *         Manuel Requena <manuel.requena@cttc.es>
+ *
  * Modified by: Michele Polese <michele.polese@gmail.com>
  *          Support for real S1AP link
  */
@@ -50,22 +51,22 @@
 #include <ns3/ipv6-address-generator.h>
 #include <ns3/icmpv6-l4-protocol.h>
 
-namespace ns3
-{
+namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE("PointToPointEpcHelper");
+NS_LOG_COMPONENT_DEFINE ("PointToPointEpcHelper");
 
-NS_OBJECT_ENSURE_REGISTERED(PointToPointEpcHelper);
+NS_OBJECT_ENSURE_REGISTERED (PointToPointEpcHelper);
+
 
 PointToPointEpcHelper::PointToPointEpcHelper ()
   : m_gtpuUdpPort (2152),  // fixed by the standard
     m_s1apUdpPort (36412)
 {
-    NS_LOG_FUNCTION(this);
-    // To access the attribute value within the constructor
-    ObjectBase::ConstructSelf(AttributeConstructionList());
+  NS_LOG_FUNCTION (this);
+  // To access the attribute value within the constructor
+  ObjectBase::ConstructSelf (AttributeConstructionList ());
 
-// since we use point-to-point links for all S1-U and S1-AP links,
+  // since we use point-to-point links for all S1-U and S1-AP links,
   // we use a /30 subnet which can hold exactly two addresses
   // (remember that net broadcast and null address are not valid)
   m_s1uIpv4AddressHelper.SetBase ("10.0.0.0", "255.255.255.252");
@@ -153,15 +154,15 @@ PointToPointEpcHelper::PointToPointEpcHelper ()
   s1apMme->SetEpcS1apSapMmeUser(m_mmeApp->GetS1apSapMme());
 }
 
-PointToPointEpcHelper::~PointToPointEpcHelper()
+PointToPointEpcHelper::~PointToPointEpcHelper ()
 {
-    NS_LOG_FUNCTION(this);
+  NS_LOG_FUNCTION (this);
 }
 
 TypeId
-PointToPointEpcHelper::GetTypeId()
+PointToPointEpcHelper::GetTypeId (void)
 {
-    static TypeId tid = TypeId ("ns3::PointToPointEpcHelper")
+  static TypeId tid = TypeId ("ns3::PointToPointEpcHelper")
     .SetParent<EpcHelper> ()
     .SetGroupName("Lte")
     .AddConstructor<PointToPointEpcHelper> ()
@@ -235,9 +236,9 @@ PointToPointEpcHelper::GetTypeId()
 }
 
 TypeId
-PointToPointEpcHelper::GetInstanceTypeId() const
+PointToPointEpcHelper::GetInstanceTypeId () const
 {
-    return GetTypeId();
+  return GetTypeId ();
 }
 
 void
@@ -355,7 +356,7 @@ PointToPointEpcHelper::AddEnb (Ptr<Node> enb, Ptr<NetDevice> lteEnbNetDevice, ui
   Ptr<EpcEnbApplication> enbApp = CreateObject<EpcEnbApplication> (enbLteSocket, enbLteSocket6, enbS1uSocket, enbAddress, sgwAddress, cellId);
   enb->AddApplication (enbApp);
   NS_ASSERT (enb->GetNApplications () == 1);
-  NS_ASSERT_MSG (enb->GetApplication (0)->GetObject<EpcEnbApplication> () != 0, "cannot retrieve EpcEnbApplication");
+  NS_ASSERT_MSG (enb->GetApplication (0)->GetObject<EpcEnbApplication> (), "cannot retrieve EpcEnbApplication");
   NS_LOG_LOGIC ("enb: " << enb << ", enb->GetApplication (0): " << enb->GetApplication (0));
 
 
@@ -453,7 +454,7 @@ PointToPointEpcHelper::ActivateEpsBearer (Ptr<NetDevice> ueDevice, uint64_t imsi
   Ptr<Node> ueNode = ueDevice->GetNode ();
   Ptr<Ipv4> ueIpv4 = ueNode->GetObject<Ipv4> ();
   Ptr<Ipv6> ueIpv6 = ueNode->GetObject<Ipv6> ();
-  NS_ASSERT_MSG (ueIpv4 != 0, "UEs need to have IPv4 installed before EPS bearers can be activated");
+  NS_ASSERT_MSG (ueIpv4, "UEs need to have IPv4 installed before EPS bearers can be activated");
 
   if (ueIpv4)
     {
@@ -496,7 +497,7 @@ PointToPointEpcHelper::ActivateEpsBearer (Ptr<NetDevice> ueDevice, Ptr<EpcUeNas>
   // the user simulation program, rather than done by the EPC
   Ptr<Node> ueNode = ueDevice->GetNode ();
   Ptr<Ipv4> ueIpv4 = ueNode->GetObject<Ipv4> ();
-  NS_ASSERT_MSG (ueIpv4 != 0, "UEs need to have IPv4 installed before EPS bearers can be activated");
+  NS_ASSERT_MSG (ueIpv4, "UEs need to have IPv4 installed before EPS bearers can be activated");
   int32_t interface =  ueIpv4->GetInterfaceForDevice (ueDevice);
   NS_ASSERT (interface >= 0);
   NS_ASSERT (ueIpv4->GetNAddresses (interface) == 1);

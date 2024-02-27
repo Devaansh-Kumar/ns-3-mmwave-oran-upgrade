@@ -85,7 +85,7 @@ class EpcHelper : public Object
      */
     virtual void AddEnb(Ptr<Node> enbNode,
                         Ptr<NetDevice> lteEnbNetDevice,
-                        uint16_t cellId) = 0;
+                        uint16_t cellIds) = 0;
 
     /**
      * Notify the EPC of the existence of a new UE which might attach at a later time
@@ -135,20 +135,13 @@ class EpcHelper : public Object
     virtual uint8_t ActivateEpsBearer (Ptr<NetDevice> ueLteDevice, Ptr<EpcUeNas> ueNas, uint64_t imsi, Ptr<EpcTft> tft, EpsBearer bearer) = 0;
 
     /**
-     * Get the SGW node
-     *
-     * \return a pointer to the SGW
-     */
-    virtual Ptr<Node> GetSgwNode() const = 0;
-
-    /**
      * Get the PGW node
      *
      * \return a pointer to the PGW node
      * The primary use intended for this method is to allow the user to configure the SGi
      * interface of the PGW, i.e., to connect the PGW to the internet.
      */
-    virtual Ptr<Node> GetPgwNode() const = 0;
+    virtual Ptr<Node> GetPgwNode() = 0;
 
     /**
      * Assign IPv4 addresses to UE devices
